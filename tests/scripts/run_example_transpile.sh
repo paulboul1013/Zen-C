@@ -5,26 +5,46 @@ EXAMPLES_DIR="examples"
 FAIL_COUNT=0
 PASS_COUNT=0
 
+if [ ! -f "$ZC" ]; then
+    echo "Error: zc binary not found."
+    exit 1
+fi
+
+# Allow specifying what tests to run as inputs to the script
+# Example: run_example_transpile.sh examples/simd.zc examples/area_test.zc
+TEST_FILES=("$@")
+
+if [ ${#TEST_FILES[@]} -gt 0 ]; then
+    TEST_LIST=$(printf "%s\n" "${TEST_FILES[@]}" | grep "$EXAMPLES_DIR"/)
+else
+    TEST_LIST=$(find "$EXAMPLES_DIR" -name "*.zc" | sort)
+fi
+
+if [ -z "$TEST_LIST" ]; then
+    echo "** Nothing to do **"
+    exit 0
+fi
+
 echo "Running Example Transpilation Tests..."
 
 while IFS= read -r file; do
+    [ -e "$file" ] || continue
     echo -n "Transpiling $file... "
     
-    OUTPUT=$($ZC transpile "$file" 2>&1)
+    OUTPUT=$($ZC transpile "$file" -o "$file.c" 2>&1)
     EXIT_CODE=$?
     
     if [ $EXIT_CODE -eq 0 ]; then
         echo "PASS"
         PASS_COUNT=$((PASS_COUNT + 1))
-        [ -f "out.c" ] && rm "out.c"
+        [ -f "$file.c" ] && rm "$file.c"
         [ -f "a.out" ] && rm "a.out"
     else
         echo "FAIL"
         echo "$OUTPUT"
         FAIL_COUNT=$((FAIL_COUNT + 1))
     fi
-
-done < <(find "$EXAMPLES_DIR" -name "*.zc")
+done <<< "$TEST_LIST"
 
 echo "----------------------------------------"
 echo "Summary:"

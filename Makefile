@@ -222,10 +222,12 @@ clean:
 	@echo "=> Clean complete!"
 
 # Test
+# Supports running specific tests:
+#	make test only="tests/std/test_hash.zc examples/arena_test.zc"
 test: $(TARGET) $(PLUGINS)
-	./tests/scripts/run_tests.sh
-	./tests/scripts/run_codegen_tests.sh
-	./tests/scripts/run_example_transpile.sh
+	./tests/scripts/run_tests.sh -- $(filter %.zc,$(only))
+	./tests/scripts/run_codegen_tests.sh $(filter %.zc,$(only))
+	./tests/scripts/run_example_transpile.sh $(filter %.zc,$(only))
 
 test-tcc: $(TARGET) $(PLUGINS)
 	./tests/scripts/run_tests.sh --cc tcc

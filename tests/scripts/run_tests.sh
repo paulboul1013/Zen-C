@@ -4,15 +4,18 @@
 # Usage: ./tests/scripts/run_tests.sh [options]
 #
 # Options:
-#   --cpp               Compile all tests in C++ mode
-#   --cc <compiler>     Use a specific C compiler
-#   --check         Enable typechecking
+#   --cpp                   Compile all tests in C++ mode
+#   --cc <compiler>         Use a specific C compiler
+#   --check                 Enable typechecking
+#   -- file1.zc file2.zc    Any file listed after postfix `--` will be run
+#                           If empty, scan for and run all tests
 #
 # Examples:
-#   ./tests/scripts/run_tests.sh                    # Test in C mode (default)
-#   ./tests/scripts/run_tests.sh --cpp              # Test in C++ mode
-#   ./tests/scripts/run_tests.sh --cc clang         # Test with clang
-#   ./tests/scripts/run_tests.sh --cc clang --cpp   # Test in C++ mode with clang
+#   ./tests/scripts/run_tests.sh                                        # Test in C mode (default)
+#   ./tests/scripts/run_tests.sh --cpp                                  # Test in C++ mode
+#   ./tests/scripts/run_tests.sh --cc clang                             # Test with clang
+#   ./tests/scripts/run_tests.sh --cc clang --cpp                       # Test in C++ mode with clang
+#   ./tests/scripts/run_tests.sh -- std/test_hash.zc std/test_arena.zc  # Test only these files
 
 # Configuration
 ZC="./zc"
@@ -35,12 +38,25 @@ FAILED_TESTS=""
 CC_NAME="gcc (default)"
 USE_TYPECHECK=0
 USE_CPP=0
+TEST_FILES=()
 sys_type=$(uname -s)
 sys_arch=$(uname -m)
 zc_args=()
 
+collect_files=0
 prev_arg=""
 for arg in "$@"; do
+    if [ "$arg" = "--" ]; then
+        # After `--`, only .zc files to test are listed
+        collect_files=1
+        continue
+    fi
+
+    if [ $collect_files -eq 1 ]; then
+        TEST_FILES+=("$arg")
+        continue
+    fi
+
     if [ "$prev_arg" = "--cc" ]; then
         CC_NAME="$arg"
     fi
@@ -67,12 +83,23 @@ if [ $USE_CPP -eq 1 ]; then
     MODE="C++"
 fi
 
-echo "** Running Zen C test suite (mode: $MODE, compiler: $CC_NAME) **"
-
 if [ ! -f "$ZC" ]; then
     echo "Error: zc binary not found. Please build it first."
     exit 1
 fi
+
+if [ ${#TEST_FILES[@]} -gt 0 ]; then
+    TEST_LIST=$(printf "%s\n" "${TEST_FILES[@]}" | grep "$TEST_DIR"/)
+else
+    TEST_LIST=$(find "$TEST_DIR" -name "*.zc" -not -name "_*.zc" | sort)
+fi
+
+if [ ${#TEST_LIST[@]} -eq 0 ]; then
+    echo "** Nothing to do **"
+    exit 0
+fi
+
+echo "** Running Zen C test suite (mode: $MODE, compiler: $CC_NAME) **"
 
 while read -r test_file; do
     [ -e "$test_file" ] || continue
@@ -167,7 +194,7 @@ while read -r test_file; do
             FAILED_TESTS="$FAILED_TESTS\n- $test_file"
         fi
     fi
-done < <(find "$TEST_DIR" -name "*.zc" -not -name "_*.zc" | sort)
+done <<< "$TEST_LIST"
 
 echo "----------------------------------------"
 echo "Results ($MODE mode):"

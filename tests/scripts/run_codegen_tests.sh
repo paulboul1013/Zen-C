@@ -11,6 +11,25 @@ if [ ! -f "$ZC" ]; then
     exit 1
 fi
 
+# Make forwards what tests to run as inputs to the script
+# But this is not used by this script atm, since it only runs 1 cherry-picked file
+# Consume the arguments and, if present, disable this script
+# Example: run_codegen_tests.sh examples/simd.zc examples/area_test.zc
+TEST_FILES=("$@")
+
+if [ ${#TEST_FILES[@]} -gt 0 ]; then
+    TEST_LIST=$(printf "%s\n" "${TEST_FILES[@]}" | grep "$EXAMPLES_DIR"/)
+else
+    TEST_LIST=$(find "$EXAMPLES_DIR" -name "*.zc" | sort)
+fi
+
+# This script doesn't support running on set of target files currently
+# But make passes the arguments forward, so treat it as wanting to disable this test
+if [ -n "$TEST_LIST" ]; then
+    echo "** Nothing to do **"
+    exit 0
+fi
+
 echo "** Running Codegen Verification Tests **"
 
 # Test 1: Duplicate Typedefs
@@ -36,7 +55,7 @@ else
 fi
 
 # Cleanup
-rm -f "${TEST_NAME%.zc}.c" a.out
+rm -f "${TEST_NAME%.zc}.c" "${TEST_NAME%.zc}" a.out
 
 echo "----------------------------------------"
 echo "Summary:"

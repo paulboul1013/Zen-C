@@ -4750,6 +4750,100 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 return n;
             }
         }
+        else
+        {
+            lexer_next(l);
+
+            ASTNode *args[16];
+            int ac = 0;
+            while (1)
+            {
+                args[ac++] = parse_expr_prec(ctx, l, PREC_ASSIGNMENT);
+                if (lexer_peek(l).type == TOK_COMMA)
+                {
+                    lexer_next(l);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            char fmt[256];
+            fmt[0] = 0;
+            for (int i = 0; i < ac; i++)
+            {
+                Type *inner_t = args[i]->type_info;
+                if (!inner_t && args[i]->type == NODE_EXPR_VAR)
+                {
+                    inner_t = find_symbol_type_info(ctx, args[i]->var_ref.name);
+                }
+
+                if (!inner_t)
+                {
+                    strcat(fmt, "%d");
+                }
+                else
+                {
+                    if (inner_t->kind == TYPE_INT || inner_t->kind == TYPE_I32 ||
+                        inner_t->kind == TYPE_BOOL)
+                    {
+                        strcat(fmt, "%d");
+                    }
+                    else if (inner_t->kind == TYPE_F64)
+                    {
+                        strcat(fmt, "%lf");
+                    }
+                    else if (inner_t->kind == TYPE_F32 || inner_t->kind == TYPE_FLOAT)
+                    {
+                        strcat(fmt, "%f");
+                    }
+                    else if (inner_t->kind == TYPE_STRING ||
+                             (inner_t->kind == TYPE_ARRAY && inner_t->inner &&
+                              (inner_t->inner->kind == TYPE_CHAR ||
+                               inner_t->inner->kind == TYPE_U8 || inner_t->inner->kind == TYPE_I8)))
+                    {
+                        strcat(fmt, "%s");
+                    }
+                    else if (inner_t->kind == TYPE_CHAR || inner_t->kind == TYPE_I8 ||
+                             inner_t->kind == TYPE_U8 || inner_t->kind == TYPE_BYTE)
+                    {
+                        strcat(fmt, " %c");
+                    }
+                    else
+                    {
+                        strcat(fmt, "%d");
+                    }
+                }
+                if (i < ac - 1)
+                {
+                    strcat(fmt, " ");
+                }
+            }
+
+            ASTNode *call = ast_create(NODE_EXPR_CALL);
+            ASTNode *callee = ast_create(NODE_EXPR_VAR);
+            callee->var_ref.name = xstrdup("_z_scan_helper");
+            call->call.callee = callee;
+            call->type_info = type_new(TYPE_INT);
+
+            ASTNode *fmt_node = ast_create(NODE_EXPR_LITERAL);
+            fmt_node->literal.type_kind = LITERAL_STRING;
+            fmt_node->literal.string_val = xstrdup(fmt);
+            ASTNode *head = fmt_node, *tail = fmt_node;
+
+            for (int i = 0; i < ac; i++)
+            {
+                ASTNode *addr = ast_create(NODE_EXPR_UNARY);
+                addr->unary.op = xstrdup("&");
+                addr->unary.operand = args[i];
+                tail->next = addr;
+                tail = addr;
+            }
+            call->call.args = head;
+
+            return call;
+        }
     }
     if (t.type == TOK_OP && is_token(t, "!"))
     {

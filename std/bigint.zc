@@ -1,0 +1,94 @@
+import "./vec.zc"
+
+struct BigInt {
+    digits: Vec<u8>*
+}
+
+impl BigInt {
+    fn new() -> Self {
+        let v_ptr: Vec<u8>* = malloc(sizeof(Vec<u8>));
+        *v_ptr = Vec<u8>::new();
+        return BigInt { digits: v_ptr };
+    }
+    
+    fn from_int(val_in: u64) -> Self {
+        let b = BigInt::new();
+        let val = val_in;
+        if val == 0 {
+            b.digits.push(0);
+            return b;
+        }
+        while val > 0 {
+            b.digits.push((u8)(val % 10));
+            val /= 10;
+        }
+        return b;
+    }
+    
+    fn clone(self) -> Self {
+        let v_ptr: Vec<u8>* = malloc(sizeof(Vec<u8>));
+        *v_ptr = self.digits.clone();
+        return BigInt { digits: v_ptr };
+    }
+    
+    fn free_mem(self) {
+        if (usize)self.digits != 0 {
+            self.digits.free();
+            free(self.digits);
+        }
+    }
+    
+    fn add_in_place(self, other: BigInt) {
+        let carry: u8 = 0;
+        let i: usize = 0;
+        let max_len = self.digits.len;
+        if other.digits.len > max_len {
+            max_len = other.digits.len;
+        }
+        
+        while i < max_len || carry > 0 {
+            let sum: u8 = carry;
+            if i < self.digits.len {
+                sum += self.digits.get(i);
+            }
+            if i < other.digits.len {
+                sum += other.digits.get(i);
+            }
+            
+            carry = sum / 10;
+            let digit = sum % 10;
+            
+            if i < self.digits.len {
+                self.digits.data[i] = digit;
+            } else {
+                self.digits.push(digit);
+            }
+            i += 1;
+        }
+    }
+    
+    fn add(self, other: BigInt) -> Self {
+        let res = self.clone();
+        res.add_in_place(other);
+        return res;
+    }
+    
+    fn to_string(self) -> char* {
+        let len = self.digits.len;
+        if len == 0 {
+            return strdup("0");
+        }
+        let buf: char* = malloc(len + 1);
+        let idx: usize = 0;
+        let i = len;
+        while i > 0 {
+            i -= 1;
+            buf[idx] = (char)(self.digits.get(i) + '0');
+            idx += 1;
+        }
+        buf[idx] = 0;
+        return buf;
+    }
+}
+
+

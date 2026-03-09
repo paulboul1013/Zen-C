@@ -1,5 +1,6 @@
 # Standard Library
 
+- [BigInt](./bigint.md) - Arbitrary-precision integer arithmetic.
 - [Crypto (SHA1)](./crypto.md) - Cryptographic primitives.
 - [CUDA](./cuda.md) - CUDA GPGPU operations.
 - [Encoding (Base64)](./encoding.md) - Data encoding utilities.

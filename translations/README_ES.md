@@ -1396,6 +1396,7 @@ Zen C incluye una biblioteca estándar (`std`) que cubre las funcionalidades ese
 
 | Módulo | Descripción | Docs |
 | :--- | :--- | :--- |
+| **`std/bigint.zc`** | Entero de precisión arbitraria `BigInt`. | [Docs](../docs/std/bigint.md) |
 | **`std/vec.zc`** | Array dinámico creíble `Vec<T>`. | [Docs](../docs/std/vec.md) |
 | **`std/string.zc`** | Tipo `String` asignado en el heap con soporte UTF-8. | [Docs](../docs/std/string.md) |
 | **`std/queue.zc`** | Cola FIFO (Ring Buffer). | [Docs](../docs/std/queue.md) |

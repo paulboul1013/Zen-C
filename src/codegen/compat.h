@@ -42,8 +42,40 @@
     "#endif\n"                                                                                     \
     "#endif\n"
 
-/* Generic selection string for C mode */
+#ifdef __SIZEOF_INT128__
+#define _z_128_map , __int128 : "%s", unsigned __int128 : "%s"
+#define _z_128_arg_map(x)                                                                          \
+    , __int128 : _z_i128_str((__int128)(x)), unsigned __int128 : _z_u128_str((unsigned __int128)(x))
+#else
+#define _z_128_map
+#define _z_128_arg_map(x)
+#endif
+
 #define ZC_C_GENERIC_STR                                                                           \
+    "#ifdef __SIZEOF_INT128__\n"                                                                   \
+    "static inline const char *_z_u128_str(unsigned __int128 val) {\n"                             \
+    "    static _Thread_local char buf[40];\n"                                                     \
+    "    if (val == 0) return \"0\";\n"                                                            \
+    "    int i = 38;\n"                                                                            \
+    "    buf[39] = 0;\n"                                                                           \
+    "    while (val > 0) { buf[i--] = (char)((val % 10) + '0'); val /= 10; }\n"                    \
+    "    return &buf[i + 1];\n"                                                                    \
+    "}\n"                                                                                          \
+    "static inline const char *_z_i128_str(__int128 val) {\n"                                      \
+    "    static _Thread_local char buf[41];\n"                                                     \
+    "    if (val == 0) return \"0\";\n"                                                            \
+    "    int neg = val < 0;\n"                                                                     \
+    "    unsigned __int128 uval = neg ? -val : val;\n"                                             \
+    "    int i = 39;\n"                                                                            \
+    "    buf[40] = 0;\n"                                                                           \
+    "    while (uval > 0) { buf[i--] = (char)((uval % 10) + '0'); uval /= 10; }\n"                 \
+    "    if (neg) buf[i--] = '-';\n"                                                               \
+    "    return &buf[i + 1];\n"                                                                    \
+    "}\n"                                                                                          \
+    "#define _z_128_map ,__int128: \"%s\", unsigned __int128: \"%s\"\n"                            \
+    "#else\n"                                                                                      \
+    "#define _z_128_map\n"                                                                         \
+    "#endif\n"                                                                                     \
     "#ifdef __OBJC__\n"                                                                            \
     "#define _z_objc_map ,id: \"%s\", Class: \"%s\", SEL: \"%s\"\n"                                \
     "#define _z_objc_arg_map(x) ,id: [(id)(x) description].UTF8String, Class: "                    \
@@ -58,10 +90,17 @@
     "unsigned short: \"%u\", int: \"%d\", unsigned int: \"%u\", "                                  \
     "long: \"%ld\", unsigned long: \"%lu\", long long: \"%lld\", "                                 \
     "unsigned long long: \"%llu\", float: \"%f\", double: \"%f\", "                                \
-    "char*: \"%s\", const char*: \"%s\", void*: \"%p\" _z_objc_map)\n"
+    "char*: \"%s\", const char*: \"%s\", void*: \"%p\" _z_128_map _z_objc_map)\n"
 
 #define ZC_C_ARG_GENERIC_STR                                                                       \
-    "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(x) _z_objc_arg_map(x), default: (x))\n"
+    "#ifdef __SIZEOF_INT128__\n"                                                                   \
+    "#define _z_128_arg_map(x) ,__int128: _z_i128_str((__int128)(x)), unsigned __int128: "         \
+    "_z_u128_str((unsigned __int128)(x))\n"                                                        \
+    "#else\n"                                                                                      \
+    "#define _z_128_arg_map(x)\n"                                                                  \
+    "#endif\n"                                                                                     \
+    "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(x) _z_128_arg_map(x) _z_objc_arg_map(x), " \
+    "default: (x))\n"
 
 #ifdef __cplusplus
 #include <type_traits>

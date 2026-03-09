@@ -26,14 +26,44 @@ static void emit_freestanding_preamble(FILE *out)
     fputs("#define F32 float\n#define F64 double\n", out);
     fputs("static inline const char* _z_bool_str(_Bool b) { return b ? \"true\" : \"false\"; }\n",
           out);
+    fputs("#ifdef __SIZEOF_INT128__\n", out);
+    fputs("static inline const char *_z_u128_str(unsigned __int128 val) {\n"
+          "    static _Thread_local char buf[40];\n"
+          "    if (val == 0) return \"0\";\n"
+          "    int i = 38;\n"
+          "    buf[39] = 0;\n"
+          "    while (val > 0) { buf[i--] = (char)((val % 10) + '0'); val /= 10; }\n"
+          "    return &buf[i + 1];\n"
+          "}\n"
+          "static inline const char *_z_i128_str(__int128 val) {\n"
+          "    static _Thread_local char buf[41];\n"
+          "    if (val == 0) return \"0\";\n"
+          "    int neg = val < 0;\n"
+          "    unsigned __int128 uval = neg ? -val : val;\n"
+          "    int i = 39;\n"
+          "    buf[40] = 0;\n"
+          "    while (uval > 0) { buf[i--] = (char)((uval % 10) + '0'); uval /= 10; }\n"
+          "    if (neg) buf[i--] = '-';\n"
+          "    return &buf[i + 1];\n"
+          "}\n"
+          "#define _z_128_map ,__int128: \"%s\", unsigned __int128: \"%s\"\n"
+          "#define _z_128_arg_map(x) ,__int128: _z_i128_str((__int128)(x)), unsigned __int128: "
+          "_z_u128_str((unsigned __int128)(x))\n",
+          out);
+    fputs("#else\n", out);
+    fputs("#define _z_128_map\n", out);
+    fputs("#define _z_128_arg_map(x)\n", out);
+    fputs("#endif\n", out);
     fputs("#define _z_str(x) _Generic((x), _Bool: \"%s\", char: \"%c\", "
           "signed char: \"%c\", unsigned char: \"%u\", short: \"%d\", "
           "unsigned short: \"%u\", int: \"%d\", unsigned int: \"%u\", "
           "long: \"%ld\", unsigned long: \"%lu\", long long: \"%lld\", "
           "unsigned long long: \"%llu\", float: \"%f\", double: \"%f\", "
-          "char*: \"%s\", const char*: \"%s\", void*: \"%p\")\n",
+          "char*: \"%s\", const char*: \"%s\", void*: \"%p\" _z_128_map)\n",
           out);
-    fputs("#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(x), default: (x))\n", out);
+    fputs(
+        "#define _z_arg(x) _Generic((x), _Bool: _z_bool_str(x) _z_128_arg_map(x), default: (x))\n",
+        out);
     fputs("typedef struct { void *func; void *ctx; } z_closure_T;\n", out);
     fputs("static void *_z_closure_ctx_stash[256];\n", out);
 

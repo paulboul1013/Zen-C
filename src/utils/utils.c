@@ -408,7 +408,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 for (int i = 0; libs[i]; i++)
                 {
                     if (!isalnum(libs[i]) && libs[i] != '-' && libs[i] != '_' && libs[i] != ' ' &&
-                        libs[i] != '.')
+                        libs[i] != '.' && libs[i] != '+')
                     {
                         is_safe = 0;
                         break;

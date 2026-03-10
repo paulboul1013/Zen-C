@@ -99,6 +99,8 @@ These methods handle UTF-8 character boundaries correctly, contrasting with the 
 | **split** | `split(self, delim: char) -> Vec<String>` | Splits the string into a vector of substrings separated by `delim`. |
 | **trim** | `trim(self) -> String` | Returns a new string with leading and trailing whitespace removed. |
 | **replace** | `replace(self, target: char*, replacement: char*) -> String` | Returns a new string with all occurrences of `target` replaced by `replacement`. |
+| **pad_left** | `pad_left(self, target_len: usize, pad_char: char) -> String` | Returns a new string padded to `target_len` on the left with `pad_char`. |
+| **pad_right** | `pad_right(self, target_len: usize, pad_char: char) -> String` | Returns a new string padded to `target_len` on the right with `pad_char`. |
 
 ### Comparison
 

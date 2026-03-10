@@ -235,6 +235,51 @@ impl String {
         return String { vec: Vec<char> { data: d, len: l, cap: c_cap } };
     }
 
+    fn pad_right(self, target_len: usize, pad_char: char) -> String {
+        let current_len = self.length();
+        if (current_len >= target_len) {
+            return String::from(self.c_str());
+        }
+        
+        let v = Vec<char>::new();
+        for (let i: usize = 0; i < current_len; i = i + 1) {
+            v.push(self.vec.get(i));
+        }
+        for (let i: usize = current_len; i < target_len; i = i + 1) {
+            v.push(pad_char);
+        }
+        v.push(0);
+        
+        let d = v.data;
+        let l = v.len;
+        let c_cap = v.cap;
+        v.forget();
+        return String { vec: Vec<char> { data: d, len: l, cap: c_cap } };
+    }
+
+    fn pad_left(self, target_len: usize, pad_char: char) -> String {
+        let current_len = self.length();
+        if (current_len >= target_len) {
+            return String::from(self.c_str());
+        }
+        
+        let v = Vec<char>::new();
+        let diff = target_len - current_len;
+        for (let i: usize = 0; i < diff; i = i + 1) {
+            v.push(pad_char);
+        }
+        for (let i: usize = 0; i < current_len; i = i + 1) {
+            v.push(self.vec.get(i));
+        }
+        v.push(0);
+        
+        let d = v.data;
+        let l = v.len;
+        let c_cap = v.cap;
+        v.forget();
+        return String { vec: Vec<char> { data: d, len: l, cap: c_cap } };
+    }
+
     fn to_uppercase(self) -> String {
         let len = self.length();
         let v = Vec<char>::new();

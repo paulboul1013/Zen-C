@@ -341,13 +341,16 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
         }
         else if (is_option)
         {
+            int m_is_ptr = has_ref_binding || (expr_type && strchr(expr_type, '*'));
+            const char *acc = m_is_ptr ? "->" : ".";
+
             if (strcmp(c->match_case.pattern, "Some") == 0)
             {
-                fprintf(out, "_m_%d->is_some", id);
+                fprintf(out, "_m_%d%sis_some", id, acc);
             }
             else if (strcmp(c->match_case.pattern, "None") == 0)
             {
-                fprintf(out, "!_m_%d->is_some", id);
+                fprintf(out, "!_m_%d%sis_some", id, acc);
             }
             else
             {
@@ -356,13 +359,16 @@ void codegen_match_internal(ParserContext *ctx, ASTNode *node, FILE *out, int us
         }
         else if (is_result)
         {
+            int m_is_ptr = has_ref_binding || (expr_type && strchr(expr_type, '*'));
+            const char *acc = m_is_ptr ? "->" : ".";
+
             if (strcmp(c->match_case.pattern, "Ok") == 0)
             {
-                fprintf(out, "_m_%d->is_ok", id);
+                fprintf(out, "_m_%d%sis_ok", id, acc);
             }
             else if (strcmp(c->match_case.pattern, "Err") == 0)
             {
-                fprintf(out, "!_m_%d->is_ok", id);
+                fprintf(out, "!_m_%d%sis_ok", id, acc);
             }
             else
             {

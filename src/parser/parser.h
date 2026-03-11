@@ -34,6 +34,28 @@ struct MoveState;
 typedef struct ParserContext ParserContext;
 
 /**
+ * @brief Attributes for a declaration (e.g., @packed, @cfg).
+ */
+typedef struct DeclarationAttributes
+{
+    int is_packed;
+    int align;
+    char *cfg_condition;
+    int vector_size;
+    int cuda_global;
+    int cuda_device;
+    int cuda_host;
+    Attribute *custom_attributes;
+    char **derived_traits;
+    int derived_count;
+} DeclarationAttributes;
+
+/**
+ * @brief Parses attributes (prefixed with @).
+ */
+DeclarationAttributes parse_attributes(ParserContext *ctx, Lexer *l);
+
+/**
  * @brief Parses a program.
  */
 ASTNode *parse_program(ParserContext *ctx, Lexer *l);

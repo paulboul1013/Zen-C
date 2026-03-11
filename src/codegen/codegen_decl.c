@@ -1034,6 +1034,10 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                     m = m->next;
                     continue;
                 }
+                if (m->cfg_condition)
+                {
+                    fprintf(out, "#if %s\n", m->cfg_condition);
+                }
                 char *fname = m->func.name;
                 char *proto = xmalloc(strlen(fname) + strlen(sname) + 2);
                 int slen = strlen(sname);
@@ -1056,6 +1060,10 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                 {
                     emit_func_signature(ctx, out, m, proto);
                     fprintf(out, ";\n");
+                }
+                if (m->cfg_condition)
+                {
+                    fprintf(out, "#endif\n");
                 }
 
                 free(proto);
@@ -1121,6 +1129,10 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                     m = m->next;
                     continue;
                 }
+                if (m->cfg_condition)
+                {
+                    fprintf(out, "#if %s\n", m->cfg_condition);
+                }
                 if (m->func.is_async)
                 {
                     fprintf(out, "Async %s(%s);\n", m->func.name, m->func.args);
@@ -1128,6 +1140,10 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                 else
                 {
                     fprintf(out, "%s %s(%s);\n", m->func.ret_type, m->func.name, m->func.args);
+                }
+                if (m->cfg_condition)
+                {
+                    fprintf(out, "#endif\n");
                 }
                 m = m->next;
             }

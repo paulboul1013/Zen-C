@@ -63,6 +63,7 @@ impl Bits {
     }
 
     // 128-bit rotations
+    @cfg(not(__TINYC__))
     fn rotl128(n: u128, c: u128) -> u128 {
         let mask: u128 = 127;
         c &= mask;
@@ -70,6 +71,7 @@ impl Bits {
         return (n << c) | (n >> (128 - c));
     }
 
+    @cfg(not(__TINYC__))
     fn rotr128(n: u128, c: u128) -> u128 {
         let mask: u128 = 127;
         c &= mask;
@@ -102,6 +104,7 @@ impl Bits {
         return (((n + (n >> 4)) & 0x0F0F0F0F0F0F0F0F) * 0x0101010101010101) >> 56;
     }
 
+    @cfg(not(__TINYC__))
     fn popcount128(n: u128) -> u128 {
         return (u128)(Bits::popcount64((u64)(n >> 64)) + Bits::popcount64((u64)(n & 0xFFFFFFFFFFFFFFFF)));
     }
@@ -141,6 +144,7 @@ impl Bits {
         return 64 - Bits::popcount64(n);
     }
 
+    @cfg(not(__TINYC__))
     fn clz128(n: u128) -> u128 {
         n = n | (n >> 1);
         n = n | (n >> 2);
@@ -173,6 +177,7 @@ impl Bits {
         return Bits::popcount64((n & ((~n) + 1)) - 1);
     }
 
+    @cfg(not(__TINYC__))
     fn ctz128(n: u128) -> u128 {
         if (n == 0) return 128;
         return Bits::popcount128((n & ((~n) + 1)) - 1);
@@ -194,6 +199,7 @@ impl Bits {
         return (((u64)Bits::bswap32((u32)n)) << 32) | ((u64)Bits::bswap32((u32)(n >> 32)));
     }
 
+    @cfg(not(__TINYC__))
     fn bswap128(n: u128) -> u128 {
         return (((u128)Bits::bswap64((u64)n)) << 64) | ((u128)Bits::bswap64((u64)(n >> 64)));
     }
@@ -227,6 +233,7 @@ impl Bits {
         return Bits::bswap64(n);
     }
 
+    @cfg(not(__TINYC__))
     fn reverse_bits128(n: u128) -> u128 {
         let hi = Bits::reverse_bits64((u64)(n >> 64));
         let lo = Bits::reverse_bits64((u64)n);

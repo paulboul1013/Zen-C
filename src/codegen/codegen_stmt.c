@@ -554,6 +554,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             break;
         }
+        if (node->cfg_condition)
+        {
+            fprintf(out, "#if %s\n", node->cfg_condition);
+        }
 
         if (node->func.is_async)
         {
@@ -664,6 +668,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "    return (Async){.thread=th, .result=NULL};\n");
             fprintf(out, "}\n");
 
+            if (node->cfg_condition)
+            {
+                fprintf(out, "#endif\n");
+            }
             break;
         }
 
@@ -826,6 +834,10 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         }
         g_current_func_ret_type = prev_ret;
         fprintf(out, "}\n");
+        if (node->cfg_condition)
+        {
+            fprintf(out, "#endif\n");
+        }
         break;
 
     case NODE_ASSERT:

@@ -1650,8 +1650,8 @@ static ASTNode *parse_char_literal(Token t)
                 node->literal.int_val = val;
                 return node;
             }
-            // Fallthrough if not {
         }
+        /* fallthrough */
         default:
             val = (unsigned char)*s;
             break;

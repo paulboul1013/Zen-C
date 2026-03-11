@@ -407,6 +407,12 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 lexer_next(l);
                 break;
             }
+            DeclarationAttributes attrs = {0};
+            if (lexer_peek(l).type == TOK_AT)
+            {
+                attrs = parse_attributes(ctx, l);
+            }
+
             if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0)
             {
                 ASTNode *f = parse_function(ctx, l, 0);
@@ -420,6 +426,11 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                 char *na = patch_self_args(f->func.args, full_target_name);
                 free(f->func.args);
                 f->func.args = na;
+
+                if (attrs.cfg_condition)
+                {
+                    f->cfg_condition = attrs.cfg_condition;
+                }
 
                 // Register function for lookup
                 if (f->func.generic_params)
@@ -697,7 +708,53 @@ ASTNode *parse_impl(ParserContext *ctx, Lexer *l)
                     lexer_next(l);
                     break;
                 }
-                if (lexer_peek(l).type == TOK_IDENT && strncmp(lexer_peek(l).start, "fn", 2) == 0)
+                if (lexer_peek(l).type == TOK_AT)
+                {
+                    DeclarationAttributes attrs = parse_attributes(ctx, l);
+                    if (lexer_peek(l).type == TOK_IDENT &&
+                        strncmp(lexer_peek(l).start, "fn", 2) == 0)
+                    {
+                        ASTNode *f = parse_function(ctx, l, 0);
+
+                        // Standard Mangle: Struct_method
+                        char *mangled = xmalloc(strlen(name1) + strlen(f->func.name) + 3);
+                        sprintf(mangled, "%s__%s", name1, f->func.name);
+                        free(f->func.name);
+                        f->func.name = mangled;
+
+                        char *na = patch_self_args(f->func.args, name1);
+                        free(f->func.args);
+                        f->func.args = na;
+
+                        if (attrs.cfg_condition)
+                        {
+                            f->cfg_condition = attrs.cfg_condition;
+                        }
+
+                        if (f->func.generic_params)
+                        {
+                            register_func_template(ctx, mangled, f->func.generic_params, f);
+                        }
+                        else
+                        {
+                            register_func(ctx, mangled, f->func.arg_count, f->func.defaults,
+                                          f->func.arg_types, f->func.ret_type_info,
+                                          f->func.is_varargs, 0, f->token);
+                        }
+
+                        if (!h)
+                        {
+                            h = f;
+                        }
+                        else
+                        {
+                            tl->next = f;
+                        }
+                        tl = f;
+                    }
+                }
+                else if (lexer_peek(l).type == TOK_IDENT &&
+                         strncmp(lexer_peek(l).start, "fn", 2) == 0)
                 {
                     ASTNode *f = parse_function(ctx, l, 0);
 

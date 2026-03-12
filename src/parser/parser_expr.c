@@ -4421,6 +4421,26 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
         {
             Token bracket = lexer_next(l); // consume '['
             ASTNode *index = parse_expression(ctx, l);
+
+            ASTNode *extra_head = NULL;
+            ASTNode *extra_tail = NULL;
+            int extra_count = 0;
+            while (lexer_peek(l).type == TOK_COMMA)
+            {
+                lexer_next(l); // eat comma
+                ASTNode *idx = parse_expression(ctx, l);
+                if (!extra_head)
+                {
+                    extra_head = idx;
+                }
+                else
+                {
+                    extra_tail->next = idx;
+                }
+                extra_tail = idx;
+                extra_count++;
+            }
+
             {
                 Token inner_t = lexer_next(l);
                 if (inner_t.type != TOK_RBRACKET)
@@ -4429,8 +4449,8 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 }
             }
 
-            // Static Array Bounds Check
-            if (node->type_info && node->type_info->kind == TYPE_ARRAY &&
+            // Static Array Bounds Check (only for single-index)
+            if (extra_count == 0 && node->type_info && node->type_info->kind == TYPE_ARRAY &&
                 node->type_info->array_size > 0)
             {
                 if (index->type == NODE_EXPR_LITERAL && index->literal.type_kind == LITERAL_INT)
@@ -4456,7 +4476,7 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 FuncSig *sig = find_func(ctx, mangled);
                 if (sig)
                 {
-                    // Rewrite to Call: node.get(index)
+                    // Rewrite to Call: node.get(index, ...)
                     ASTNode *call = ast_create(NODE_EXPR_CALL);
                     ASTNode *callee = ast_create(NODE_EXPR_VAR);
                     callee->var_ref.name = xstrdup(mangled);
@@ -4484,7 +4504,15 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
 
                     // Arg 2: Index
                     arg1->next = index;
-                    index->next = NULL;
+                    // Chain extra indices as additional args
+                    if (extra_head)
+                    {
+                        index->next = extra_head;
+                    }
+                    else
+                    {
+                        index->next = NULL;
+                    }
                     call->call.args = arg1;
 
                     call->type_info = sig->ret_type;
@@ -4500,6 +4528,8 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
                 ASTNode *idx_node = ast_create(NODE_EXPR_INDEX);
                 idx_node->index.array = node;
                 idx_node->index.index = index;
+                idx_node->index.extra_indices = extra_head;
+                idx_node->index.index_count = 1 + extra_count;
 
                 // Resolve array type_info from symbol table if needed
                 Type *arr_type = node->type_info;
@@ -6134,7 +6164,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             }
             else
             {
-                // Case: [start] or [start..] or [start..end]
+                // Case: [start] or [start..] or [start..end] or [start, expr, ...]
                 start = parse_expression(ctx, l);
                 if (lexer_peek(l).type == TOK_DOTDOT || lexer_peek(l).type == TOK_DOTDOT_LT)
                 {
@@ -6144,6 +6174,29 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                     {
                         end = parse_expression(ctx, l);
                     }
+                }
+            }
+
+            // Multi-index: [expr, expr, ...] -> collect extra indices
+            ASTNode *extra_head = NULL;
+            ASTNode *extra_tail = NULL;
+            int extra_count = 0;
+            if (!is_slice)
+            {
+                while (lexer_peek(l).type == TOK_COMMA)
+                {
+                    lexer_next(l); // eat comma
+                    ASTNode *idx = parse_expression(ctx, l);
+                    if (!extra_head)
+                    {
+                        extra_head = idx;
+                    }
+                    else
+                    {
+                        extra_tail->next = idx;
+                    }
+                    extra_tail = idx;
+                    extra_count++;
                 }
             }
 
@@ -6195,6 +6248,8 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
                 ASTNode *node = ast_create(NODE_EXPR_INDEX);
                 node->index.array = lhs;
                 node->index.index = start;
+                node->index.extra_indices = extra_head;
+                node->index.index_count = 1 + extra_count;
 
                 char *struct_name = NULL;
                 Type *inner_t = lhs->type_info;

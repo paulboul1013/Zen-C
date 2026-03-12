@@ -608,6 +608,7 @@ Zen C supporta l'overloading di operatori per gli struct definiti dall'utente pe
 | | `!` | `not` |
 | | `~` | `bitnot` |
 | **Indice** | `a[i]` | `get(a, i)` |
+| | `a[i, j]` | `get(a, i, j)` |
 | | `a[i] = v` | `set(a, i, v)` |
 
 > **Nota sull'uguaglianza delle stringhe**:
@@ -624,6 +625,22 @@ impl Punto {
 }
 
 let p3 = p1 + p2; // Chiama p1.somma(p2)
+```
+
+**Esempio Multi-Indice:**
+```zc
+struct Matrice {
+    data: int[9];
+}
+
+impl Matrice {
+    fn get(self, riga: int, col: int) -> int {
+        return self.data[riga * 3 + col];
+    }
+}
+
+let m = Matrice{data: [1,0,0, 0,1,0, 0,0,1]};
+let val = m[1, 2]; // Chiama Matrice.get(m, 1, 2)
 ```
 
 #### Zucchero Sintattico

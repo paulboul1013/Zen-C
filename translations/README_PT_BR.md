@@ -615,6 +615,7 @@ Zen C suporta sobrecarga de operadores para structs definidos pelo usuário atra
 | | `!` | `not` |
 | | `~` | `bitnot` |
 | **Índice** | `a[i]` | `get(a, i)` |
+| | `a[i, j]` | `get(a, i, j)` |
 | | `a[i] = v` | `set(a, i, v)` |
 
 > [!NOTE] 
@@ -632,6 +633,22 @@ impl Point {
 }
 
 let p3 = p1 + p2; // Chama p1.add(p2)
+```
+
+**Exemplo Multi-Índice:**
+```zc
+struct Matriz {
+    data: int[9];
+}
+
+impl Matriz {
+    fn get(self, linha: int, col: int) -> int {
+        return self.data[linha * 3 + col];
+    }
+}
+
+let m = Matriz{data: [1,0,0, 0,1,0, 0,0,1]};
+let val = m[1, 2]; // Chama Matriz.get(m, 1, 2)
 ```
 
 #### Açúcar Sintático

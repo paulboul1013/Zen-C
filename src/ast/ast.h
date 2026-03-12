@@ -422,6 +422,8 @@ struct ASTNode
         {
             ASTNode *array;
             ASTNode *index;
+            ASTNode *extra_indices; // Linked list of additional indices (for v[i, j, k])
+            int index_count;        // Total index count (1 for v[i], 2 for v[i,j], etc.)
         } index;
 
         struct

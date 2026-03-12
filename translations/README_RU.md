@@ -602,6 +602,7 @@ Zen C поддерживает перегрузку операторов для 
 |                | `!`                     | `not`                             |
 |                | `~`                     | `bitnot`                          |
 | **Индекс**     | `a[i]`                  | `get(a, i)`                       |
+|                | `a[i, j]`               | `get(a, i, j)`                    |
 |                | `a[i] = v`              | `set(a, i, v)`                    |
 
 > [!NOTE]
@@ -619,6 +620,22 @@ impl Point {
 }
 
 let p3 = p1 + p2; // Вызывает p1.add(p2)
+```
+
+**Пример мульти-индекса:**
+```zc
+struct Matrix {
+    data: int[9];
+}
+
+impl Matrix {
+    fn get(self, row: int, col: int) -> int {
+        return self.data[row * 3 + col];
+    }
+}
+
+let m = Matrix{data: [1,0,0, 0,1,0, 0,0,1]};
+let val = m[1, 2]; // Вызывает Matrix.get(m, 1, 2)
 ```
 
 | `\|>`    | Pipeline        | `x \|> f(y)` раскрывается в `f(x, y)`                                    |

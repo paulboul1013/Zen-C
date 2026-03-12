@@ -1276,6 +1276,14 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                 codegen_expression(ctx, node->index.array, out);
                 fprintf(out, ", ");
                 codegen_expression(ctx, node->index.index, out);
+                // Emit extra indices for multi-index (v[i, j, k])
+                ASTNode *extra = node->index.extra_indices;
+                while (extra)
+                {
+                    fprintf(out, ", ");
+                    codegen_expression(ctx, extra, out);
+                    extra = extra->next;
+                }
                 fprintf(out, ")");
                 free(struct_name);
             }

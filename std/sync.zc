@@ -1,0 +1,115 @@
+
+include <pthread.h>
+
+import "./core.zc"
+import "./mem.zc"
+
+struct Mutex {
+    handle: void*;
+}
+
+impl Mutex {
+    fn new() -> Mutex {
+        let ptr = malloc(64); 
+        pthread_mutex_init(ptr, NULL);
+        return Mutex { handle: ptr };
+    }
+    
+    fn lock(self) {
+        pthread_mutex_lock(self.handle);
+    }
+    
+    fn unlock(self) {
+        pthread_mutex_unlock(self.handle);
+    }
+    
+    fn free(self) {
+        if (self.handle != NULL) {
+            pthread_mutex_destroy(self.handle);
+            free(self.handle);
+            self.handle = NULL;
+        }
+    }
+}
+
+struct CondVar {
+    handle: void*;
+}
+
+impl CondVar {
+    fn new() -> CondVar {
+        let ptr = malloc(64); 
+        pthread_cond_init(ptr, NULL);
+        return CondVar { handle: ptr };
+    }
+    
+    fn wait(self, mutex: Mutex*) {
+        pthread_cond_wait(self.handle, (*mutex).handle);
+    }
+    
+    fn signal(self) {
+        pthread_cond_signal(self.handle);
+    }
+    
+    fn broadcast(self) {
+        pthread_cond_broadcast(self.handle);
+    }
+    
+    fn free(self) {
+        if (self.handle != NULL) {
+            pthread_cond_destroy(self.handle);
+            free(self.handle);
+            self.handle = NULL;
+        }
+    }
+}
+
+struct RwLock {
+    handle: void*;
+}
+
+impl RwLock {
+    fn new() -> RwLock {
+        let ptr = malloc(64); 
+        pthread_rwlock_init(ptr, NULL);
+        return RwLock { handle: ptr };
+    }
+    
+    fn rdlock(self) {
+        pthread_rwlock_rdlock(self.handle);
+    }
+    
+    fn wrlock(self) {
+        pthread_rwlock_wrlock(self.handle);
+    }
+    
+    fn unlock(self) {
+        pthread_rwlock_unlock(self.handle);
+    }
+    
+    fn free(self) {
+        if (self.handle != NULL) {
+            pthread_rwlock_destroy(self.handle);
+            free(self.handle);
+            self.handle = NULL;
+        }
+    }
+}
+
+impl Drop for Mutex {
+    fn drop(self) {
+        self.free();
+    }
+}
+
+impl Drop for CondVar {
+    fn drop(self) {
+        self.free();
+    }
+}
+
+impl Drop for RwLock {
+    fn drop(self) {
+        self.free();
+    }
+}

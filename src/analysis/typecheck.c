@@ -8,7 +8,7 @@
 
 // ** Internal Helpers **
 
-static void tc_error(TypeChecker *tc, Token t, const char *msg)
+void tc_error(TypeChecker *tc, Token t, const char *msg)
 {
     if (tc->move_checks_only)
     {
@@ -18,12 +18,18 @@ static void tc_error(TypeChecker *tc, Token t, const char *msg)
     tc->error_count++;
 }
 
-static void tc_error_with_hints(TypeChecker *tc, Token t, const char *msg, const char *const *hints)
+void tc_error_with_hints(TypeChecker *tc, Token t, const char *msg, const char *const *hints)
 {
     if (tc->move_checks_only)
     {
         return;
     }
+    zerror_with_hints(t, msg, hints);
+    tc->error_count++;
+}
+
+void tc_move_error_with_hints(TypeChecker *tc, Token t, const char *msg, const char *const *hints)
+{
     zerror_with_hints(t, msg, hints);
     tc->error_count++;
 }
@@ -208,18 +214,19 @@ static void check_move_for_rvalue(TypeChecker *tc, ASTNode *rvalue)
         const char *hints[] = {"This type owns resources and cannot be implicitly copied",
                                "Consider borrowing value via references or implementing Copy",
                                NULL};
-        tc_error_with_hints(tc, rvalue->token, "Cannot move out of a borrowed reference", hints);
+        tc_move_error_with_hints(tc, rvalue->token, "Cannot move out of a borrowed reference",
+                                 hints);
     }
     else if (rvalue->type == NODE_EXPR_MEMBER)
     {
-        const char *hints[] = {
-            "Cannot move a field out of a struct. Consider cloning or borrowing.", NULL};
-        tc_error_with_hints(tc, rvalue->token, "Cannot move out of a struct field", hints);
+        // Now allowed, but will be tracked by path
+        mark_symbol_moved(tc->pctx, NULL, rvalue);
     }
     else if (rvalue->type == NODE_EXPR_INDEX)
     {
         const char *hints[] = {"Cannot move an element out of an array or slice.", NULL};
-        tc_error_with_hints(tc, rvalue->token, "Cannot move out of an index expression", hints);
+        tc_move_error_with_hints(tc, rvalue->token, "Cannot move out of an index expression",
+                                 hints);
     }
 }
 
@@ -1059,7 +1066,7 @@ static void check_expr_var(TypeChecker *tc, ASTNode *node)
 
     if (!tc->is_assign_lhs)
     {
-        check_use_validity(tc, node, sym);
+        check_use_validity(tc, node);
     }
 }
 
@@ -1713,15 +1720,9 @@ static void check_node(TypeChecker *tc, ASTNode *node)
         break;
     case NODE_EXPR_MEMBER:
         check_node(tc, node->member.target);
-        // Propagate type from struct field if available
         if (node->member.target && node->member.target->type_info)
         {
-            Type *target_type = node->member.target->type_info;
-            // For pointer access, dereference first
-            if (target_type->kind == TYPE_POINTER && target_type->inner)
-            {
-                target_type = target_type->inner;
-            }
+            Type *target_type = get_inner_type(node->member.target->type_info);
             // Look up struct field type
             if (target_type->kind == TYPE_STRUCT && target_type->name)
             {
@@ -1734,13 +1735,23 @@ static void check_node(TypeChecker *tc, ASTNode *node)
                         if (field->type == NODE_FIELD && field->field.name &&
                             strcmp(field->field.name, node->member.field) == 0)
                         {
-                            // Found field - could set type_info here if we had field type
+                            node->type_info = field->type_info;
                             break;
                         }
                         field = field->next;
                     }
                 }
             }
+        }
+        if (!node->type_info)
+        {
+            // Fallback for method calls or failed lookups
+            node->type_info = type_new(TYPE_UNKNOWN);
+        }
+
+        if (!tc->is_assign_lhs)
+        {
+            check_use_validity(tc, node);
         }
         break;
     case NODE_DEFER:
@@ -1808,19 +1819,6 @@ static void check_node(TypeChecker *tc, ASTNode *node)
         tc->pctx->move_state = prev_move_state;
         break;
     }
-    case NODE_RAW_STMT:
-        if (node->raw_stmt.used_symbols && node->raw_stmt.used_symbol_count > 0)
-        {
-            for (int i = 0; i < node->raw_stmt.used_symbol_count; i++)
-            {
-                ZenSymbol *sym = tc_lookup(tc, node->raw_stmt.used_symbols[i]);
-                if (sym)
-                {
-                    check_use_validity(tc, node, sym);
-                }
-            }
-        }
-        break;
 
     case NODE_EXPR_CAST:
         // Check the expression being cast
@@ -2028,7 +2026,7 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node)
                 continue;
             }
 
-            check_use_validity(tc, node, sym);
+            check_path_validity(tc, var_name, node->token);
 
             if (mode == 0)
             {

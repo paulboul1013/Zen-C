@@ -59,6 +59,14 @@ int check_program(ParserContext *ctx, ASTNode *root);
  * @param root Root AST node of the program.
  * @return 0 on success (no move errors), non-zero if move errors occurred.
  */
+/**
+ * @brief Move-Only Checking Entry Point.
+ */
 int check_moves_only(ParserContext *ctx, ASTNode *root);
+
+// Error helpers available to move_check.c
+void tc_error(TypeChecker *tc, Token t, const char *msg);
+void tc_error_with_hints(TypeChecker *tc, Token t, const char *msg, const char *const *hints);
+void tc_move_error_with_hints(TypeChecker *tc, Token t, const char *msg, const char *const *hints);
 
 #endif // TYPECHECK_H

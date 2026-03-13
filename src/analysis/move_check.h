@@ -69,9 +69,14 @@ void move_state_merge_into(MoveState **target, MoveState *src);
 void move_state_free(MoveState *state);
 
 /**
- * @brief Check if a symbol is moved in the given state (or parents).
+ * @brief Check if a symbol or path is moved in the given state (or parents).
  */
-MoveStatus get_move_status(MoveState *state, const char *name);
+MoveStatus get_move_status(MoveState *state, const char *path);
+
+/**
+ * @brief Returns a heap-allocated path string for a node (e.g. "var.field"), or NULL.
+ */
+char *get_node_path(ASTNode *node);
 
 /**
  * @brief Determines if a type is safe to copy (implements Copy or is a primitive).
@@ -83,29 +88,38 @@ MoveStatus get_move_status(MoveState *state, const char *name);
 int is_type_copy(ParserContext *ctx, Type *t);
 
 /**
- * @brief Checks if a symbol uses is valid (not moved).
- *
- * Reports an error if the symbol has been moved.
+ * @brief Checks if a path use is valid (not moved).
  *
  * @param tc Type checker context for error reporting.
- * @param node The AST node where the use occurs (for location).
- * @param sym The symbol being used.
+ * @param path The path string to check.
+ * @param t Token for error location.
  */
-void check_use_validity(TypeChecker *tc, ASTNode *node, ZenSymbol *sym);
+void check_path_validity(TypeChecker *tc, const char *path, Token t);
 
 /**
- * @brief Marks a symbol as moved if its type is not Copy.
+ * @brief Checks if a node use is valid (not moved).
+ *
+ * Reports an error if the node (or its parent path) has been moved.
+ *
+ * @param tc Type checker context for error reporting.
+ * @param node The AST node where the use occurs.
+ */
+void check_use_validity(TypeChecker *tc, ASTNode *node);
+
+/**
+ * @brief Marks a symbol (or path) as moved if its type is not Copy.
  *
  * @param ctx Parser context (for checking Copy trait).
- * @param sym The symbol to mark.
+ * @param sym The symbol to mark (may be NULL if node is a member).
  * @param context_node The AST node causing the move (assignment, call, etc.).
  */
 void mark_symbol_moved(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node);
 
 /**
- * @brief Marks a symbol as valid (initialized or re-assigned).
+ * @brief Marks a symbol (or path) as valid (initialized or re-assigned).
  *
  * @param sym The symbol to mark.
+ * @param context_node The AST node where it's assigned.
  */
 void mark_symbol_valid(ParserContext *ctx, ZenSymbol *sym, ASTNode *context_node);
 

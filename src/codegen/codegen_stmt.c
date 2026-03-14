@@ -977,6 +977,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             char *variant = node->destruct.guard_variant;
             char *check = "val"; // field to access
 
+            emit_source_mapping_duplicate(node, out);
             if (strcmp(variant, "Some") == 0)
             {
                 fprintf(out, "    if (!_tmp_%d.is_some) {\n", id);
@@ -1001,6 +1002,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "    }\n");
 
             // Bind value
+            emit_source_mapping_duplicate(node, out);
             if (strstr(g_config.cc, "tcc"))
             {
                 fprintf(out, "    __typeof__(_tmp_%d.%s) %s = _tmp_%d.%s;\n", id, check,
@@ -1015,6 +1017,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         {
             for (int i = 0; i < node->destruct.count; i++)
             {
+                emit_source_mapping_duplicate(node, out);
                 if (node->destruct.is_struct_destruct)
                 {
                     char *field = node->destruct.field_names ? node->destruct.field_names[i]

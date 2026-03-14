@@ -88,6 +88,12 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes);
  * @brief Emits C preprocessor directives for source mapping.
  */
 void emit_source_mapping(ASTNode *node, FILE *out);
+/**
+ * @brief Emits C preprocessor directives for source mapping.
+ * Special override for emit_source_mapping that allows duplicate source mappings for 1:N expression mapping.
+ * This is a QoL function that improves the debugging experience.
+ */
+void emit_source_mapping_duplicate(ASTNode *node, FILE *out);
 
 // Global state (shared across modules).
 extern ASTNode *global_user_structs;  ///< List of user defined structs.

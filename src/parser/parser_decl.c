@@ -334,7 +334,7 @@ static void replace_it_with_var(ASTNode *node, char *var_name)
 
 ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
 {
-    lexer_next(l); // eat 'var'
+    Token tk = lexer_next(l); // eat 'var'
 
     // Destructuring: var {x, y} = ... OR var (a: type, b: type) = ...
     if (lexer_peek(l).type == TOK_LBRACE || lexer_peek(l).type == TOK_LPAREN)
@@ -389,6 +389,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
             lexer_next(l);
         }
         ASTNode *n = ast_create(NODE_DESTRUCT_VAR);
+        n->token = tk;
         n->destruct.names = names;
         n->destruct.types = types;
         n->destruct.type_infos = type_infos;
@@ -460,6 +461,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         }
 
         ASTNode *n = ast_create(NODE_DESTRUCT_VAR);
+        n->token = name_tok;
         n->destruct.names = names;
         n->destruct.field_names = fields;
         n->destruct.count = count;
@@ -512,6 +514,7 @@ ASTNode *parse_var_decl(ParserContext *ctx, Lexer *l)
         }
 
         ASTNode *n = ast_create(NODE_DESTRUCT_VAR);
+        n->token = t;
         n->destruct.names = xmalloc(sizeof(char *));
         n->destruct.names[0] = val_name;
         n->destruct.count = 1;

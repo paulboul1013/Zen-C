@@ -5,35 +5,15 @@ import "./string.zc"
 include <stdio.h>
 include <stdarg.h>
 
-// These work directly with const char* in extern declarations
-extern fn vprintf(fmt: const char*, ap: va_list) -> c_int;
-
-// vsnprintf is problematic on macOS because it's a macro that expands to a builtin with a different signature
-// so we wrap it in a C function to avoid the conflict
-extern fn _z_vsnprintf(str: char*, size: usize, fmt: const char*, ap: va_list) -> c_int;
-
 // EOF is typically -1, but we define it for portability
 
-// Minimal raw block: only for truly opaque FILE* types that can't be
-// represented in Zen-C extern declarations without type conflicts.
-// These wrappers use void* to avoid FILE* declaration conflicts.
-raw {
-    void* _z_get_stdin(void) { return stdin; }
-    int _z_fgetc(void* stream) { return fgetc((FILE*)stream); }
-    int _z_vsnprintf(char* str, size_t size, const char* fmt, va_list ap) {
-        return vsnprintf(str, size, fmt, ap);
-    }
-}
-
-extern fn _z_get_stdin() -> void*;
-extern fn _z_fgetc(stream: void*) -> c_int;
-
+// EOF is typically -1, but we define it for portability
 fn format(fmt: char*, ...) -> char* {
     static let buffer: char[1024];
     let ap: va_list;
     va_start(ap, fmt);
 
-    _z_vsnprintf(buffer, 1024, fmt, ap);
+    vsnprintf(buffer, 1024, fmt, ap);
     va_end(ap);
 
     return (char*)buffer;
@@ -43,7 +23,7 @@ fn format_into(buffer: char*, size: usize, fmt: char*, ...) -> c_int {
     let ap: va_list;
     va_start(ap, fmt);
 
-    let ret = _z_vsnprintf(buffer, size, fmt, ap);
+    let ret = vsnprintf(buffer, size, fmt, ap);
     va_end(ap);
 
     return ret;
@@ -56,7 +36,7 @@ fn format_new(fmt: char*, ...) -> char* {
     let ap: va_list;
     va_start(ap, fmt);
 
-    _z_vsnprintf(buffer, 1024, fmt, ap);
+    vsnprintf(buffer, 1024, fmt, ap);
     va_end(ap);
 
     return buffer;
@@ -86,10 +66,10 @@ fn readln() -> char* {
     if (line == NULL) return NULL;
     
     let c: c_int;
-    let std_in = _z_get_stdin();
+    let std_in = stdin;
 
     while (true) {
-        c = _z_fgetc(std_in);
+        c = fgetc(std_in);
         // Explicit cast to avoid -1 becoming UINT64_MAX in some contexts if treated as unsigned
         let eof_c: c_int = -1; 
         if (c == eof_c) break;
@@ -130,8 +110,8 @@ fn _utf8_seq_len(first_byte: byte) -> usize {
 }
 
 fn read_rune() -> rune {
-    let std_in = _z_get_stdin();
-    let c1 = _z_fgetc(std_in);
+    let std_in = stdin;
+    let c1 = fgetc(std_in);
     if (c1 == -1) return (rune)0;
     
     let first = (byte)c1;
@@ -141,16 +121,16 @@ fn read_rune() -> rune {
     let val: uint32_t = 0;
     if (len == 2) {
         val = (uint32_t)(first & 0x1F) << 6;
-        val = val | (uint32_t)((byte)_z_fgetc(std_in) & 0x3F);
+        val = val | (uint32_t)((byte)fgetc(std_in) & 0x3F);
     } else if (len == 3) {
         val = (uint32_t)(first & 0x0F) << 12;
-        val = val | ((uint32_t)((byte)_z_fgetc(std_in) & 0x3F) << 6);
-        val = val | (uint32_t)((byte)_z_fgetc(std_in) & 0x3F);
+        val = val | ((uint32_t)((byte)fgetc(std_in) & 0x3F) << 6);
+        val = val | (uint32_t)((byte)fgetc(std_in) & 0x3F);
     } else if (len == 4) {
         val = (uint32_t)(first & 0x07) << 18;
-        val = val | ((uint32_t)((byte)_z_fgetc(std_in) & 0x3F) << 12);
-        val = val | ((uint32_t)((byte)_z_fgetc(std_in) & 0x3F) << 6);
-        val = val | (uint32_t)((byte)_z_fgetc(std_in) & 0x3F);
+        val = val | ((uint32_t)((byte)fgetc(std_in) & 0x3F) << 12);
+        val = val | ((uint32_t)((byte)fgetc(std_in) & 0x3F) << 6);
+        val = val | (uint32_t)((byte)fgetc(std_in) & 0x3F);
     }
     return (rune)val;
 }

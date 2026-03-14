@@ -1,14 +1,8 @@
 include "std/third-party/tre/include/tre.h"
-
 raw {
-    // Include TRE implementation for static linking
-    #if defined(_WIN32) && defined(_MSC_VER)
-      // Windows (MSVC) needs full source inclusion as linking .o files is hard
-      #include "std/third-party/tre/tre_full.c"
-    #else
-      // Linux/macOS/MinGW: Also include source to ensure linking works without precompiled libs
-      #include "std/third-party/tre/tre_full.c"
-    #endif
+    // Include TRE implementation for static linking.
+    // This ensures linking works without precompiled libraries across all platforms (Windows/Linux/macOS).
+    #include "std/third-party/tre/tre_full.c"
 }
 
 import "./core.zc"

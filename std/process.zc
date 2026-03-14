@@ -7,14 +7,8 @@ import "./option.zc";
 
 import "sys/process.zc";
 
-// system() can be externed directly with const char*
-extern fn system(command: const char*) -> c_int;
-
-
-
 extern fn _z_popen(command: const char*, type: const char*) -> void*;
 extern fn _z_pclose(stream: void*) -> c_int;
-extern fn _z_fgets(s: char*, size: c_int, stream: void*) -> char*;
 
 struct Output {
     std_out: String;
@@ -73,8 +67,8 @@ impl Command {
         let buf = (char*)malloc(buf_size);
         
         while (true) {
-            let res = _z_fgets(buf, (c_int)buf_size, fp);
-            if (res == 0) break;
+            let fgets_res = fgets(buf, (c_int)buf_size, fp);
+            if (fgets_res == 0) break;
             
             let chunk = String::from(buf);
             out.append(&chunk);

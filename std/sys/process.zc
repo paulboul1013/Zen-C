@@ -1,10 +1,9 @@
+include <stdio.h>
+include <stdlib.h>
 
 raw {
-#include <stdio.h>
-#include <stdlib.h>
-
     // Minimal raw block: only for opaque FILE* types
-    // popen/pclose/fgets use FILE* which conflicts with void*
+    // popen/pclose use FILE* which conflicts with void*
     
     void *_z_popen(const char *command, const char *type) {
 #ifdef _WIN32
@@ -20,9 +19,5 @@ raw {
 #else
         return pclose((FILE *)stream);
 #endif
-    }
-    
-    char *_z_fgets(char *s, int size, void *stream) {
-        return fgets(s, size, (FILE *)stream);
     }
 }

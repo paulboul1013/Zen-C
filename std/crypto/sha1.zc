@@ -24,7 +24,7 @@ impl Sha1 {
         
         s.count = 0;
         let buf_ptr = &s.buffer[0];
-        raw { memset(buf_ptr, 0, 64); }
+        memset(buf_ptr, 0, 64);
         return s;
     }
 
@@ -93,7 +93,7 @@ impl Sha1 {
         if ((j + len) > 63) {
             let dst = &self.buffer[j];
             let n1 = 64 - j;
-            raw { memcpy(dst, data, n1); }
+            memcpy(dst, data, n1);
             
             self._transform(&self.buffer[0]);
             
@@ -110,7 +110,7 @@ impl Sha1 {
         let dst2 = &self.buffer[j];
         let src2 = &data[i];
         let n2 = len - i;
-        raw { memcpy(dst2, src2, n2); }
+        memcpy(dst2, src2, n2);
     }
 
     fn final(self) -> Sha1Digest {

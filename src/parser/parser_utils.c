@@ -884,7 +884,14 @@ void register_builtins(ParserContext *ctx)
     add_symbol(ctx, "strlen", "int", type_new(TYPE_INT));
     add_symbol(ctx, "strcpy", "string", type_new(TYPE_STRING));
     add_symbol(ctx, "strcat", "string", type_new(TYPE_STRING));
+    add_symbol(ctx, "memset", "void*", type_new_ptr(void_t));
+    add_symbol(ctx, "memcpy", "void*", type_new_ptr(void_t));
     add_symbol(ctx, "exit", "void", void_t);
+
+    // Stdio Globals
+    add_symbol(ctx, "stdin", "void*", type_new_ptr(void_t));
+    add_symbol(ctx, "stdout", "void*", type_new_ptr(void_t));
+    add_symbol(ctx, "stderr", "void*", type_new_ptr(void_t));
 
     // File I/O
     add_symbol(ctx, "fopen", "void*", type_new_ptr(void_t));
@@ -895,11 +902,20 @@ void register_builtins(ParserContext *ctx)
     add_symbol(ctx, "ftell", "long", type_new(TYPE_I64));
     add_symbol(ctx, "rewind", "void", void_t);
     add_symbol(ctx, "fprintf", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "vprintf", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "vfprintf", "int", type_new(TYPE_INT));
     add_symbol(ctx, "sprintf", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "vsnprintf", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "snprintf", "int", type_new(TYPE_INT));
     add_symbol(ctx, "feof", "int", type_new(TYPE_INT));
     add_symbol(ctx, "ferror", "int", type_new(TYPE_INT));
-    add_symbol(ctx, "feof", "int", type_new(TYPE_INT));
-    add_symbol(ctx, "ferror", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "mkdir", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "rmdir", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "chdir", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "getcwd", "string", type_new(TYPE_STRING));
+    add_symbol(ctx, "system", "int", type_new(TYPE_INT));
+    add_symbol(ctx, "getenv", "string", type_new(TYPE_STRING));
+    add_symbol(ctx, "fgets", "string", type_new(TYPE_STRING));
     add_symbol(ctx, "usleep", "int", type_new(TYPE_INT));
 
     ASTNode *va_def = ast_create(NODE_STRUCT);

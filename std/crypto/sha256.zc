@@ -11,9 +11,9 @@ struct Sha256 {
     bitlen: u64;
 }
 
-raw {
-    #include <string.h>
+include <string.h>
 
+raw {
     #define ROTLEFT(a,b) (((a) << (b)) | ((a) >> (32-(b))))
     #define ROTRIGHT(a,b) (((a) >> (b)) | ((a) << (32-(b))))
 
@@ -144,7 +144,7 @@ impl Sha256 {
             }
             self.transform(&self.buffer[0]);
             let _buf_ptr = &self.buffer[0];
-            raw { memset(_buf_ptr, 0, 56); }
+            memset(_buf_ptr, 0, 56);
         }
 
         self.bitlen = self.bitlen + (u64)(self.datalen * 8);
@@ -172,8 +172,7 @@ impl Sha256 {
 
     fn hash(data: char*) -> String {
         let ctx = Sha256::new();
-        let len: usize = 0;
-        raw { len = strlen(data); }
+        let len: usize = strlen(data);
         ctx.update((u8*)data, len);
         let hash_bytes: u8[32];
         ctx.finalize(&hash_bytes[0]);

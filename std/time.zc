@@ -22,7 +22,6 @@ raw {
 
 extern fn srand(seed: U32);
 extern fn rand() -> int;
-extern fn usleep(micros: U32) -> int;
 extern fn _time_now_impl() -> U64;
 extern fn _z_time_time() -> I64;
 

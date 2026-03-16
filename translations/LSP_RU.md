@@ -18,7 +18,7 @@ zc lsp
 
 Для Visual Studio Code используйте официальное расширение Zen C:
 
-- **Репозиторий**: [z-libs/zenc-vscode](https://github.com/z-libs/zenc-vscode)
+- **Репозиторий**: [zenc-lang/vscode-zenc](https://github.com/zenc-lang/vscode-zenc)
 
 Установите расширение прямо из **[Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=z-libs.zenc)**.
 

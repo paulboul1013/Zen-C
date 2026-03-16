@@ -17,7 +17,7 @@
   <p>
     <a href="#"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="构建状态"></a>
     <a href="#"><img src="https://img.shields.io/badge/license-MIT-blue" alt="许可证"></a>
-    <a href="#"><img src="https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange" alt="版本"></a>
+    <a href="#"><img src="https://img.shields.io/github/v/release/zenc-lang/zenc?label=version&color=orange" alt="版本"></a>
     <a href="#"><img src="https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey" alt="平台"></a>
   </p>
   <p><em>像高级语言一样编写，像 C 一样运行。</em></p>
@@ -114,7 +114,7 @@
 ### 安装
 
 ```bash
-git clone https://github.com/z-libs/Zen-C.git
+git clone https://github.com/zenc-lang/zenc.git
 cd Zen-C
 git submodule update --init --recursive
 make clean # 移除旧的构建文件
@@ -1773,7 +1773,7 @@ fn main() {
   </p>
   <p>
     <a href="https://discord.com/invite/q6wEsCmkJP">Discord</a> •
-    <a href="https://github.com/z-libs/Zen-C">GitHub</a> •
+    <a href="https://github.com/zenc-lang/zenc">GitHub</a> •
     <a href="CONTRIBUTING_ZH_CN.md">贡献</a>
   </p>
 </div>

@@ -17,7 +17,7 @@
   <p>
     <a href="#"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Estado de la Construcción"></a>
     <a href="#"><img src="https://img.shields.io/badge/license-MIT-blue" alt="Licencia"></a>
-    <a href="#"><img src="https://img.shields.io/github/v/release/z-libs/Zen-C?label=version&color=orange" alt="Versión"></a>
+    <a href="#"><img src="https://img.shields.io/github/v/release/zenc-lang/zenc?label=version&color=orange" alt="Versión"></a>
     <a href="#"><img src="https://img.shields.io/badge/platform-linux%20%7C%20windows%20%7C%20macos-lightgrey" alt="Plataforma"></a>
   </p>
   <p><em>Escribe como un lenguaje de alto nivel, ejecuta como C.</em></p>
@@ -114,7 +114,7 @@ Echa un vistazo a estos proyectos construidos con Zen C:
 ### Instalación
 
 ```bash
-git clone https://github.com/z-libs/Zen-C.git
+git clone https://github.com/zenc-lang/zenc.git
 cd Zen-C
 git submodule update --init --recursive
 make clean # eliminar archivos de construcción antiguos
@@ -1810,7 +1810,7 @@ Este proyecto utiliza bibliotecas de terceros. Los textos completos de las licen
   </p>
   <p>
     <a href="https://discord.com/invite/q6wEsCmkJP">Discord</a> •
-    <a href="https://github.com/z-libs/Zen-C">GitHub</a> •
+    <a href="https://github.com/zenc-lang/zenc">GitHub</a> •
     <a href="CONTRIBUTING_ES.md">Contribuir</a>
   </p>
 </div>

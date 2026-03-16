@@ -18,7 +18,7 @@ zc lsp
 
 對於 Visual Studio Code，請使用官方的 Zen C 擴充功能：
 
-- **儲存庫**: [z-libs/zenc-vscode](https://github.com/z-libs/zenc-vscode)
+- **儲存庫**: [zenc-lang/vscode-zenc](https://github.com/zenc-lang/vscode-zenc)
 
 直接從 **[Visual Studio Code Marketplace](https://marketplace.visualstudio.com/items?itemName=z-libs.zenc)** 安裝擴充功能。
 

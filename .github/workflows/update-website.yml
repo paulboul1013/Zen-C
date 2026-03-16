@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Website Repository
         uses: actions/checkout@v4
         with:
-          repository: 'z-libs/zenc-lang.org'
+          repository: 'zenc-lang/www'
           token: ${{ secrets.WEBSITE_REPO_TOKEN }}
           path: 'website-repo'
 

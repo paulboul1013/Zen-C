@@ -45,10 +45,10 @@ jobs:
           # Prevent GitHub from ignoring Doxygen's underscore folders
           touch public/.nojekyll
 
-      - name: Deploy to z-libs/Zen-C-Docs
+      - name: Deploy to zenc-lang/docs
         uses: peaceiris/actions-gh-pages@v3
         with:
           deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
-          external_repository: z-libs/Zen-C-Docs
+          external_repository: zenc-lang/docs
           publish_branch: main
           publish_dir: ./public

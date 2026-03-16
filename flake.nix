@@ -27,7 +27,7 @@
 
           meta = with pkgs; {
             description = "Zen-C programming language compiler";
-            homepage = "https://github.com/z-libs/Zen-C";
+            homepage = "https://github.com/zenc-lang/zenc";
             license = lib.licenses.mit;
             platforms = lib.platforms.unix;
             mainProgram = "zc";

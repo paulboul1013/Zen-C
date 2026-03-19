@@ -215,6 +215,10 @@ int is_type_copy(ParserContext *ctx, Type *t)
         return 0;
     }
 
+    if (t->kind == TYPE_STRUCT)
+    {
+    }
+
     switch (t->kind)
     {
     case TYPE_INT:

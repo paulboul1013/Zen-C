@@ -1011,6 +1011,9 @@ static void check_function(TypeChecker *tc, ASTNode *node)
     tc->current_func = node;
     tc_enter_scope(tc);
 
+    int prev_unreachable = tc->is_unreachable;
+    tc->is_unreachable = 0;
+
     MoveState *prev_move_state = tc->pctx->move_state;
     tc->pctx->move_state = move_state_create(NULL);
 
@@ -1056,6 +1059,7 @@ static void check_function(TypeChecker *tc, ASTNode *node)
     move_state_free(tc->pctx->move_state);
     tc->pctx->move_state = prev_move_state;
 
+    tc->is_unreachable = prev_unreachable;
     tc_exit_scope(tc);
     tc->current_func = NULL;
 }
@@ -2075,6 +2079,9 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node)
     MoveState *prev_move_state = tc->pctx->move_state;
     tc->pctx->move_state = move_state_create(NULL);
 
+    int prev_unreachable = tc->is_unreachable;
+    tc->is_unreachable = 0;
+
     if (node->lambda.body)
     {
         if (node->lambda.body->type == NODE_BLOCK)
@@ -2090,6 +2097,7 @@ static void check_expr_lambda(TypeChecker *tc, ASTNode *node)
     move_state_free(tc->pctx->move_state);
     tc->pctx->move_state = prev_move_state;
 
+    tc->is_unreachable = prev_unreachable;
     tc_exit_scope(tc);
 }
 

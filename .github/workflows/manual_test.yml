@@ -32,6 +32,9 @@ on:
         default: ''
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   manual-test:
     runs-on: ${{ inputs.os }}

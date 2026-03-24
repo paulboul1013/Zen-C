@@ -192,7 +192,8 @@ static int integer_type_width(Type *t)
 
 static void check_node(TypeChecker *tc, ASTNode *node);
 static void check_expr_lambda(TypeChecker *tc, ASTNode *node);
-static void apply_implicit_struct_pointer_conversions(ASTNode **expr_ptr, Type *expected_type);
+static void apply_implicit_struct_pointer_conversions(TypeChecker *tc, ASTNode **expr_ptr,
+                                                      Type *expected_type);
 static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, Token t);
 
 static void check_move_for_rvalue(TypeChecker *tc, ASTNode *rvalue)
@@ -359,7 +360,7 @@ static void check_expr_binary(TypeChecker *tc, ASTNode *node)
         // Check type compatibility for assignment
         if (left_type && right_type)
         {
-            apply_implicit_struct_pointer_conversions(&node->binary.right, left_type);
+            apply_implicit_struct_pointer_conversions(tc, &node->binary.right, left_type);
             right_type = node->binary.right->type_info;
             check_type_compatibility(tc, left_type, right_type, node->binary.right->token);
         }
@@ -872,7 +873,8 @@ static int is_struct_base_match(Type *base, Type *instantiated)
     return 0;
 }
 
-static void apply_implicit_struct_pointer_conversions(ASTNode **expr_ptr, Type *expected_type)
+static void apply_implicit_struct_pointer_conversions(TypeChecker *tc, ASTNode **expr_ptr,
+                                                      Type *expected_type)
 {
     if (!expr_ptr || !*expr_ptr || !expected_type)
     {
@@ -890,9 +892,13 @@ static void apply_implicit_struct_pointer_conversions(ASTNode **expr_ptr, Type *
 
     // T* (actual) -> T (expected) => Implicit Dereference *
     // This allows `return self` to return the struct value when self is a pointer.
+    // We only do this if the type is Copy, otherwise it would trigger a
+    // move-from-borrowed-reference error.
     if (a_res->kind == TYPE_POINTER && a_res->inner &&
         (a_res->inner->kind == TYPE_STRUCT || a_res->inner->kind == TYPE_ENUM) &&
-        (type_eq(a_res->inner, e_res) || is_struct_base_match(a_res->inner, e_res)))
+        (type_eq(a_res->inner, e_res) || is_struct_base_match(a_res->inner, e_res)) &&
+        is_type_copy(tc->pctx, a_res->inner))
+
     {
         ASTNode *deref = ast_create(NODE_EXPR_UNARY);
         deref->unary.op = xstrdup("*");
@@ -941,6 +947,7 @@ static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, 
     }
 
     // Resolve type aliases (str -> string, etc.)
+
     Type *resolved_target = target;
     Type *resolved_value = value;
 
@@ -1074,7 +1081,7 @@ static void check_var_decl(TypeChecker *tc, ASTNode *node)
 
         if (decl_type && init_type)
         {
-            apply_implicit_struct_pointer_conversions(&node->var_decl.init_expr, decl_type);
+            apply_implicit_struct_pointer_conversions(tc, &node->var_decl.init_expr, decl_type);
             init_type = node->var_decl.init_expr->type_info;
             check_type_compatibility(tc, decl_type, init_type, node->token);
         }
@@ -1738,7 +1745,7 @@ static void check_node(TypeChecker *tc, ASTNode *node)
             }
             else if (node->ret.value && tc->current_func->func.ret_type_info)
             {
-                apply_implicit_struct_pointer_conversions(&node->ret.value,
+                apply_implicit_struct_pointer_conversions(tc, &node->ret.value,
                                                           tc->current_func->func.ret_type_info);
                 check_type_compatibility(tc, tc->current_func->func.ret_type_info,
                                          node->ret.value->type_info, node->ret.value->token);

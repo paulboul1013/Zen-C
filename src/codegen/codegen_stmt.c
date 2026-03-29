@@ -612,12 +612,16 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             // Determine mechanism: struct/large-type? -> malloc; primitive -> cast
             int returns_struct = 0;
             char *rt = node->func.ret_type;
-            if (strstr(rt, "*") == NULL && strcmp(rt, "string") != 0 && strcmp(rt, "void") != 0 &&
-                strcmp(rt, "Async") != 0)
+            if (node->func.ret_type_info)
             {
-                if (is_struct_return_type(rt))
+                returns_struct = z_is_struct_type(node->func.ret_type_info);
+            }
+            else
+            {
+                if (rt && strstr(rt, "*") == NULL && strcmp(rt, "string") != 0 &&
+                    strcmp(rt, "void") != 0 && strcmp(rt, "Async") != 0)
                 {
-                    returns_struct = 1;
+                    returns_struct = is_struct_return_type(rt);
                 }
             }
 
@@ -1151,7 +1155,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             if (node->type_info &&
                 (!node->var_decl.init_expr || node->var_decl.init_expr->type != NODE_AWAIT))
             {
-                tname = codegen_type_to_string(node->type_info);
+                tname = type_to_c_string(node->type_info);
             }
             else if (node->var_decl.type_str && strcmp(node->var_decl.type_str, "__auto_type") != 0)
             {
@@ -1233,7 +1237,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
 
                 if (node->type_info)
                 {
-                    free(tname); // Free if allocated by codegen_type_to_string
+                    free(tname); // Free if allocated by type_to_c_string
                 }
             }
             else
@@ -1899,11 +1903,11 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
             }
             else if (arr->array_literal.elements && arr->array_literal.elements->type_info)
             {
-                elem_type = codegen_type_to_string(arr->array_literal.elements->type_info);
+                elem_type = type_to_c_string(arr->array_literal.elements->type_info);
             }
             else if (arr->type_info && arr->type_info->inner)
             {
-                elem_type = codegen_type_to_string(arr->type_info->inner);
+                elem_type = type_to_c_string(arr->type_info->inner);
             }
             else
             {
@@ -1990,7 +1994,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
                 fprintf(out, "    { ");
                 if (g_current_func_ret_type_info)
                 {
-                    char *tstr = codegen_type_to_string(g_current_func_ret_type_info);
+                    char *tstr = type_to_c_string(g_current_func_ret_type_info);
                     fprintf(out, "%s", tstr);
                     free(tstr);
                 }
@@ -2086,7 +2090,7 @@ void codegen_node_single(ParserContext *ctx, ASTNode *node, FILE *out)
         int free_ret = 0;
         if (node->type_info)
         {
-            char *t = codegen_type_to_string(node->type_info);
+            char *t = type_to_c_string(node->type_info);
             if (t)
             {
                 ret_type = t;

@@ -1,7 +1,8 @@
-
 #include "../codegen/codegen.h"
 #include "../plugins/plugin_manager.h"
 #include "parser.h"
+#include "../ast/primitives.h"
+#include <ctype.h>
 #include "analysis/const_fold.h"
 
 static int is_unmangle_primitive(const char *base);
@@ -1211,6 +1212,31 @@ void register_struct_def(ParserContext *ctx, const char *name, ASTNode *node)
 
 ASTNode *find_struct_def(ParserContext *ctx, const char *name)
 {
+    extern ASTNode *global_user_structs;
+    if (global_user_structs)
+    {
+        ASTNode *s = global_user_structs;
+        while (s)
+        {
+            if ((s->type == NODE_STRUCT || s->type == NODE_ENUM) &&
+                strcmp((s->type == NODE_STRUCT ? s->strct.name : s->enm.name), name) == 0)
+            {
+                if (s->type == NODE_STRUCT && s->strct.is_incomplete)
+                {
+                    s = s->next;
+                    continue;
+                }
+                return s;
+            }
+            s = s->next;
+        }
+    }
+
+    if (!ctx)
+    {
+        return NULL;
+    }
+
     Instantiation *i = ctx->instantiations;
     while (i)
     {
@@ -1224,7 +1250,8 @@ ASTNode *find_struct_def(ParserContext *ctx, const char *name)
     ASTNode *s = ctx->instantiated_structs;
     while (s)
     {
-        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0)
+        if ((s->type == NODE_STRUCT || s->type == NODE_ENUM) &&
+            strcmp((s->type == NODE_STRUCT ? s->strct.name : s->enm.name), name) == 0)
         {
             return s;
         }
@@ -4923,112 +4950,7 @@ const char *normalize_type_name(const char *name)
         return NULL;
     }
 
-    // Zen Primitives & Aliases
-    if (strcmp(name, "int") == 0)
-    {
-        return "int32_t";
-    }
-    if (strcmp(name, "uint") == 0)
-    {
-        return "uint32_t";
-    }
-    if (strcmp(name, "short") == 0)
-    {
-        return "int16_t";
-    }
-    if (strcmp(name, "ushort") == 0)
-    {
-        return "uint16_t";
-    }
-    if (strcmp(name, "long") == 0)
-    {
-        return "int64_t";
-    }
-    if (strcmp(name, "ulong") == 0)
-    {
-        return "uint64_t";
-    }
-
-    // Terse aliases
-    if (strcmp(name, "i8") == 0 || strcmp(name, "I8") == 0)
-    {
-        return "int8_t";
-    }
-    if (strcmp(name, "u8") == 0 || strcmp(name, "U8") == 0)
-    {
-        return "uint8_t";
-    }
-    if (strcmp(name, "i16") == 0 || strcmp(name, "I16") == 0)
-    {
-        return "int16_t";
-    }
-    if (strcmp(name, "u16") == 0 || strcmp(name, "U16") == 0)
-    {
-        return "uint16_t";
-    }
-    if (strcmp(name, "i32") == 0 || strcmp(name, "I32") == 0)
-    {
-        return "int32_t";
-    }
-    if (strcmp(name, "u32") == 0 || strcmp(name, "U32") == 0)
-    {
-        return "uint32_t";
-    }
-    if (strcmp(name, "i64") == 0 || strcmp(name, "I64") == 0)
-    {
-        return "int64_t";
-    }
-    if (strcmp(name, "u64") == 0 || strcmp(name, "U64") == 0)
-    {
-        return "uint64_t";
-    }
-
-    if (strcmp(name, "usize") == 0)
-    {
-        return "size_t";
-    }
-    if (strcmp(name, "isize") == 0)
-    {
-        return "ptrdiff_t";
-    }
-    if (strcmp(name, "byte") == 0)
-    {
-        return "uint8_t";
-    }
-    if (strcmp(name, "rune") == 0)
-    {
-        return "int32_t";
-    }
-    if (strcmp(name, "i128") == 0 || strcmp(name, "I128") == 0)
-    {
-        return "__int128";
-    }
-    if (strcmp(name, "u128") == 0 || strcmp(name, "U128") == 0)
-    {
-        return "unsigned __int128";
-    }
-    if (strcmp(name, "u0") == 0 || strcmp(name, "U0") == 0)
-    {
-        return "void";
-    }
-    if (strcmp(name, "string") == 0)
-    {
-        return "char*";
-    }
-    if (strcmp(name, "f32") == 0 || strcmp(name, "float") == 0)
-    {
-        return "float";
-    }
-    if (strcmp(name, "f64") == 0 || strcmp(name, "double") == 0)
-    {
-        return "double";
-    }
-    if (strcmp(name, "f128") == 0)
-    {
-        return "__float128";
-    }
-
-    return name;
+    return get_primitive_c_name(name);
 }
 
 int is_reserved_keyword(Token t)

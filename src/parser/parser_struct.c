@@ -1227,12 +1227,39 @@ ASTNode *parse_enum(ParserContext *ctx, Lexer *l)
             // Register Constructor Function Signature
             if (payload && !gp) // Only for non-generic enums for now
             {
-                Type **at = xmalloc(sizeof(Type *));
-                at[0] = payload;
-                Type *ret_t = type_new(TYPE_ENUM);
-                ret_t->name = xstrdup(ename);
-
-                register_func(ctx, mangled, 1, NULL, at, ret_t, 0, 0, 0, vt);
+                if (payload->kind == TYPE_STRUCT && strncmp(payload->name, "Tuple_", 6) == 0)
+                {
+                    // Unflatten tuple for the constructor signature
+                    ASTNode *tdef = find_struct_def(ctx, payload->name);
+                    if (tdef)
+                    {
+                        int ac = 0;
+                        ASTNode *f = tdef->strct.fields;
+                        while (f)
+                        {
+                            ac++;
+                            f = f->next;
+                        }
+                        Type **at = xmalloc(sizeof(Type *) * ac);
+                        f = tdef->strct.fields;
+                        for (int i = 0; i < ac; i++)
+                        {
+                            at[i] = f->type_info;
+                            f = f->next;
+                        }
+                        Type *ret_t = type_new(TYPE_ENUM);
+                        ret_t->name = xstrdup(ename);
+                        register_func(ctx, mangled, ac, NULL, at, ret_t, 0, 0, 0, vt);
+                    }
+                }
+                else
+                {
+                    Type **at = xmalloc(sizeof(Type *));
+                    at[0] = payload;
+                    Type *ret_t = type_new(TYPE_ENUM);
+                    ret_t->name = xstrdup(ename);
+                    register_func(ctx, mangled, 1, NULL, at, ret_t, 0, 0, 0, vt);
+                }
             }
             else if (!gp)
             {

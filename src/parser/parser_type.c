@@ -2,6 +2,7 @@
 #include "../ast/ast.h"
 #include "analysis/const_fold.h"
 #include "parser.h"
+#include "../ast/primitives.h"
 
 Type *parse_type_base(ParserContext *ctx, Lexer *l)
 {
@@ -107,115 +108,12 @@ Type *parse_type_base(ParserContext *ctx, Lexer *l)
         }
 
         // Check for Primitives (Base types)
-        if (strcmp(name, "U0") == 0)
+        // Check for Primitives (Base types)
+        const ZenPrimitive *prim = find_primitive_by_name(name);
+        if (prim)
         {
             free(name);
-            return type_new(TYPE_VOID);
-        }
-        if (strcmp(name, "u0") == 0)
-        {
-            free(name);
-            return type_new(TYPE_VOID);
-        }
-        if (strcmp(name, "I8") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I8);
-        }
-        if (strcmp(name, "U8") == 0)
-        {
-            free(name);
-            return type_new(TYPE_U8);
-        }
-        if (strcmp(name, "I16") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I16);
-        }
-        if (strcmp(name, "U16") == 0)
-        {
-            free(name);
-            return type_new(TYPE_U16);
-        }
-        if (strcmp(name, "I32") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I32);
-        }
-        if (strcmp(name, "U32") == 0)
-        {
-            free(name);
-            return type_new(TYPE_U32);
-        }
-        if (strcmp(name, "I64") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I64);
-        }
-        if (strcmp(name, "U64") == 0)
-        {
-            free(name);
-            return type_new(TYPE_U64);
-        }
-        if (strcmp(name, "F32") == 0)
-        {
-            free(name);
-            return type_new(TYPE_F32);
-        }
-        if (strcmp(name, "f32") == 0)
-        {
-            free(name);
-            return type_new(TYPE_F32);
-        }
-        if (strcmp(name, "F64") == 0)
-        {
-            free(name);
-            return type_new(TYPE_F64);
-        }
-        if (strcmp(name, "f64") == 0)
-        {
-            free(name);
-            return type_new(TYPE_F64);
-        }
-        if (strcmp(name, "usize") == 0)
-        {
-            free(name);
-            return type_new(TYPE_USIZE);
-        }
-        if (strcmp(name, "isize") == 0)
-        {
-            free(name);
-            return type_new(TYPE_ISIZE);
-        }
-        if (strcmp(name, "byte") == 0)
-        {
-            free(name);
-            return type_new(TYPE_BYTE);
-        }
-        if (strcmp(name, "I128") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I128);
-        }
-        if (strcmp(name, "U128") == 0)
-        {
-            free(name);
-            return type_new(TYPE_U128);
-        }
-        if (strcmp(name, "i8") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I8);
-        }
-        if (strcmp(name, "u8") == 0)
-        {
-            free(name);
-            return type_new(TYPE_U8);
-        }
-        if (strcmp(name, "i16") == 0)
-        {
-            free(name);
-            return type_new(TYPE_I16);
+            return type_new(prim->kind);
         }
 
         // C23 BitInt Support (i42, u256, etc.)

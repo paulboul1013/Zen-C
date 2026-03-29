@@ -78,7 +78,7 @@ static int struct_depends_on(ParserContext *ctx, ASTNode *s1, const char *target
         {
             if (variant->type == NODE_ENUM_VARIANT && variant->variant.payload)
             {
-                char *type_str = codegen_type_to_string(variant->variant.payload);
+                char *type_str = type_to_c_string(variant->variant.payload);
                 if (type_str)
                 {
                     if (strchr(type_str, '*'))
@@ -348,7 +348,7 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
                 Type *ft = field->type_info;
                 if (ft && ft->kind == TYPE_STRUCT && ft->name)
                 {
-                    ASTNode *fdef = find_struct_def_codegen(ctx, ft->name);
+                    ASTNode *fdef = find_struct_def(ctx, ft->name);
                     if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                     {
                         fprintf(out, "    %s__Drop_glue(&self->%s);\n", ft->name,
@@ -530,7 +530,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
         print_type_defs(ctx, out, sorted);
         if (!g_config.use_cpp)
         {
-            emit_enum_protos(sorted, out);
+            emit_enum_protos(ctx, sorted, out);
         }
         emit_global_aliases(ctx, out);
         emit_type_aliases(kids, out);
@@ -760,12 +760,12 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                 const char *resolved = find_type_alias(ctx, sname);
 
                 char *mangled = replace_string_type(sname);
-                ASTNode *def = find_struct_def_codegen(ctx, mangled);
+                ASTNode *def = find_struct_def(ctx, mangled);
                 if (!def && resolved)
                 {
                     free(mangled);
                     mangled = replace_string_type(resolved);
-                    def = find_struct_def_codegen(ctx, mangled);
+                    def = find_struct_def(ctx, mangled);
                 }
                 int skip = 0;
                 if (def)
@@ -784,7 +784,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                     char *buf = strip_template_suffix(sname);
                     if (buf)
                     {
-                        def = find_struct_def_codegen(ctx, buf);
+                        def = find_struct_def(ctx, buf);
                         if (def && def->strct.is_template)
                         {
                             skip = 1;
@@ -812,7 +812,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                 }
 
                 char *mangled = replace_string_type(sname);
-                ASTNode *def = find_struct_def_codegen(ctx, mangled);
+                ASTNode *def = find_struct_def(ctx, mangled);
                 int skip = 0;
                 if (def)
                 {
@@ -826,7 +826,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
                     char *buf = strip_template_suffix(sname);
                     if (buf)
                     {
-                        def = find_struct_def_codegen(ctx, buf);
+                        def = find_struct_def(ctx, buf);
                         if (def && def->strct.is_template)
                         {
                             skip = 1;

@@ -349,7 +349,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                 char *tstr = NULL;
                 if (node->lambda.captured_types_info && node->lambda.captured_types_info[i])
                 {
-                    tstr = codegen_type_to_string(node->lambda.captured_types_info[i]);
+                    tstr = type_to_c_string(node->lambda.captured_types_info[i]);
                 }
                 else
                 {
@@ -386,7 +386,7 @@ static void codegen_lambda_expr(ParserContext *ctx, ASTNode *node, FILE *out)
                     clean += 7;
                 }
 
-                ASTNode *fdef = find_struct_def_codegen(ctx, clean);
+                ASTNode *fdef = find_struct_def(ctx, clean);
                 if (fdef && fdef->type_info && fdef->type_info->traits.has_drop)
                 {
                     fprintf(out, "_z_ctx_%d->__z_drop_flag_%s = 1;\n", lid,
@@ -1213,7 +1213,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "; ");
 
             Type *ft = callee_ti;
-            char *ret = codegen_type_to_string(ft->inner);
+            char *ret = type_to_c_string(ft->inner);
             if (strcmp(ret, "string") == 0)
             {
                 free(ret);
@@ -1228,7 +1228,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
             fprintf(out, "((%s (*)(void*", ret);
             for (int i = 0; i < ft->arg_count; i++)
             {
-                char *as = codegen_type_to_string(ft->args[i]);
+                char *as = type_to_c_string(ft->args[i]);
                 if (strcmp(as, "unknown") == 0)
                 {
                     free(as);
@@ -1399,7 +1399,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
                     if (param_t && param_t->kind == TYPE_ARRAY && param_t->array_size == 0 &&
                         arg_t && arg_t->kind == TYPE_ARRAY && arg_t->array_size > 0)
                     {
-                        char *inner = codegen_type_to_string(param_t->inner);
+                        char *inner = type_to_c_string(param_t->inner);
                         fprintf(out, "(Slice_%s){.data = ", inner);
                         codegen_expression(ctx, arg, out);
                         fprintf(out, ", .len = %d, .cap = %d}", arg_t->array_size,
@@ -1684,7 +1684,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         char *tname = "unknown";
         if (node->type_info && node->type_info->inner)
         {
-            tname = codegen_type_to_string(node->type_info->inner);
+            tname = type_to_c_string(node->type_info->inner);
         }
 
         fprintf(out, "({ ");
@@ -1999,7 +1999,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         break;
     case NODE_VA_ARG:
     {
-        char *type_str = codegen_type_to_string(node->va_arg.type_info);
+        char *type_str = type_to_c_string(node->va_arg.type_info);
         fprintf(out, "va_arg(");
         codegen_expression(ctx, node->va_arg.ap, out);
         fprintf(out, ", %s)", type_str);
@@ -2068,7 +2068,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_EXPR_SIZEOF:
         if (node->size_of.target_type_info)
         {
-            char *mapped = codegen_type_to_string(node->size_of.target_type_info);
+            char *mapped = type_to_c_string(node->size_of.target_type_info);
             fprintf(out, "sizeof(%s)", mapped);
             free(mapped);
         }
@@ -2141,7 +2141,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
     case NODE_TYPEOF:
         if (node->size_of.target_type_info)
         {
-            char *mapped = codegen_type_to_string(node->size_of.target_type_info);
+            char *mapped = type_to_c_string(node->size_of.target_type_info);
             fprintf(out, "typeof(%s)", mapped);
             free(mapped);
         }
@@ -2162,7 +2162,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         Type *t = node->reflection.target_type;
         if (node->reflection.kind == 0)
         {
-            char *s = codegen_type_to_string(t);
+            char *s = type_to_c_string(t);
             fprintf(out, "\"%s\"", s);
             free(s);
         }
@@ -2455,7 +2455,7 @@ void codegen_expression(ParserContext *ctx, ASTNode *node, FILE *out)
         int free_ret = 0;
         if (node->type_info)
         {
-            char *t = codegen_type_to_string(node->type_info);
+            char *t = type_to_c_string(node->type_info);
             if (t)
             {
                 ret_type = t;

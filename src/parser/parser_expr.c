@@ -1734,6 +1734,10 @@ static ASTNode *parse_int_literal(Token t)
     }
 
     node->literal.int_val = val;
+    if (val > 2147483647ULL)
+    {
+        node->type_info->kind = TYPE_I64;
+    }
     free(s);
     return node;
 }

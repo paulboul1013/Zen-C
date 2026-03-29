@@ -84,6 +84,7 @@ set(SRCS
     src/parser/parser_type.c
     src/parser/parser_utils.c
     src/ast/ast.c
+    src/ast/primitives.c
     src/codegen/codegen.c
     src/codegen/codegen_decl.c
     src/codegen/codegen_main.c

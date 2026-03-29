@@ -224,11 +224,6 @@ char *load_file(const char *fn)
     {
         return NULL;
     }
-
-    if (!f)
-    {
-        return 0;
-    }
     fseek(f, 0, SEEK_END);
     long l = ftell(f);
     rewind(f);
@@ -245,24 +240,25 @@ char g_cflags[MAX_FLAGS_SIZE] = "";
 int g_warning_count = 0;
 CompilerConfig g_config = {0};
 
-static void append_flag(char *dest, size_t max_size, const char *flag)
+void append_flag(char *dest, size_t max_size, const char *prefix, const char *val)
 {
     size_t current_len = strlen(dest);
-    size_t required = strlen(flag) + (current_len > 0 ? 1 : 0);
 
-    if (current_len + required + 1 > max_size)
+    if (current_len > 0 && dest[current_len - 1] != ' ')
     {
-        zwarn("Build flags buffer overflow prevented.");
-        return;
+        strncat(dest, " ", max_size - current_len - 1);
+        current_len++;
     }
 
-    if (current_len > 0)
+    if (prefix)
     {
-        snprintf(dest + current_len, max_size - current_len, " %s", flag);
+        strncat(dest, prefix, max_size - current_len - 1);
+        current_len = strlen(dest);
     }
-    else
+
+    if (val)
     {
-        snprintf(dest, max_size, "%s", flag);
+        strncat(dest, val, max_size - current_len - 1);
     }
 }
 
@@ -417,7 +413,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     directive_val++;
                 }
-                append_flag(g_link_flags, sizeof(g_link_flags), directive_val);
+                append_flag(g_link_flags, sizeof(g_link_flags), directive_val, NULL);
             }
             else if (0 == strncmp(directive, "cflags:", 7))
             {
@@ -426,7 +422,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                 {
                     directive_val++;
                 }
-                append_flag(g_cflags, sizeof(g_cflags), directive_val);
+                append_flag(g_cflags, sizeof(g_cflags), directive_val, NULL);
             }
             else if (0 == strncmp(directive, "include:", 8))
             {
@@ -465,7 +461,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
 
                     char flags[1050];
                     snprintf(flags, sizeof(flags), "-I%s", path);
-                    append_flag(g_cflags, sizeof(g_cflags), flags);
+                    append_flag(g_cflags, sizeof(g_cflags), flags, NULL);
                 }
             }
             else if (strncmp(directive, "lib:", 4) == 0)
@@ -505,7 +501,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
 
                     char flags[1050];
                     snprintf(flags, sizeof(flags), "-L%s", path);
-                    append_flag(g_link_flags, sizeof(g_link_flags), flags);
+                    append_flag(g_link_flags, sizeof(g_link_flags), flags, NULL);
                 }
             }
             else if (strncmp(directive, "framework:", 10) == 0)
@@ -545,7 +541,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
 
                     char flags[512];
                     snprintf(flags, sizeof(flags), "-framework %s", name);
-                    append_flag(g_link_flags, sizeof(g_link_flags), flags);
+                    append_flag(g_link_flags, sizeof(g_link_flags), flags, NULL);
                 }
             }
             else if (strncmp(directive, "define:", 7) == 0)
@@ -583,9 +579,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                     }
                     *d = '\0';
 
-                    char flags[1050];
-                    snprintf(flags, sizeof(flags), "-D%s", def_val);
-                    append_flag(g_cflags, sizeof(g_cflags), flags);
+                    append_flag(g_cflags, sizeof(g_cflags), "-D", def_val);
 
                     if (g_config.cfg_define_count < 64)
                     {
@@ -670,7 +664,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                         {
                             buf[l - 1] = 0;
                         }
-                        append_flag(g_cflags, sizeof(g_cflags), buf);
+                        append_flag(g_cflags, sizeof(g_cflags), buf, NULL);
                     }
                     arg_list_free(&args);
 
@@ -686,7 +680,7 @@ void scan_build_directives(ParserContext *ctx, const char *src)
                         {
                             buf[l - 1] = 0;
                         }
-                        append_flag(g_link_flags, sizeof(g_link_flags), buf);
+                        append_flag(g_link_flags, sizeof(g_link_flags), buf, NULL);
                     }
                     arg_list_free(&args);
                 }
@@ -751,4 +745,35 @@ int levenshtein(const char *s1, const char *s2)
     }
 
     return matrix[len1][len2];
+}
+
+char *z_basename(const char *path)
+{
+    if (!path)
+    {
+        return NULL;
+    }
+    const char *last_slash = strrchr(path, '/');
+    const char *last_bslash = strrchr(path, '\\');
+    const char *last_sep = last_slash > last_bslash ? last_slash : last_bslash;
+    if (last_sep)
+    {
+        return xstrdup(last_sep + 1);
+    }
+    return xstrdup(path);
+}
+
+char *z_strip_ext(const char *filename)
+{
+    if (!filename)
+    {
+        return NULL;
+    }
+    char *res = xstrdup(filename);
+    char *last_dot = strrchr(res, '.');
+    if (last_dot)
+    {
+        *last_dot = '\0';
+    }
+    return res;
 }

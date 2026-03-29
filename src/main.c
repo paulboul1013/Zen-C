@@ -17,28 +17,6 @@
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
 
-static void main_append_flag(char *dest, size_t max_size, const char *prefix, const char *val)
-{
-    size_t cur_len = strlen(dest);
-
-    if (cur_len > 0 && dest[cur_len - 1] != ' ')
-    {
-        strncat(dest, " ", max_size - cur_len - 1);
-        cur_len++;
-    }
-
-    if (prefix)
-    {
-        strncat(dest, prefix, max_size - cur_len - 1);
-        cur_len = strlen(dest);
-    }
-
-    if (val)
-    {
-        strncat(dest, val, max_size - cur_len - 1);
-    }
-}
-
 int main(int argc, char **argv)
 {
     z_setup_terminal();
@@ -106,7 +84,7 @@ int main(int argc, char **argv)
         run_repl(argv[0]); // Pass self path for recursive calls
         return 0;
     }
-    else if (strcmp(command, "transpile") == 0)
+    else if (strcmp(command, "transpile") == 0 || strcmp(command, "-c") == 0)
     {
         g_config.mode_transpile = 1;
         g_config.emit_c = 1; // Transpile implies emitting C
@@ -321,7 +299,7 @@ int main(int argc, char **argv)
             }
             if (i_path)
             {
-                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-I", i_path);
+                append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
                 if (g_config.include_path_count < 64)
                 {
                     g_config.include_paths[g_config.include_path_count++] = xstrdup(i_path);
@@ -337,11 +315,11 @@ int main(int argc, char **argv)
             char prefix[3] = {arg[0], arg[1], '\0'};
             if (strlen(arg) > 2)
             {
-                main_append_flag(g_link_flags, MAX_FLAGS_SIZE, prefix, arg + 2);
+                append_flag(g_link_flags, MAX_FLAGS_SIZE, prefix, arg + 2);
             }
             else if (i + 1 < argc)
             {
-                main_append_flag(g_link_flags, MAX_FLAGS_SIZE, prefix, argv[++i]);
+                append_flag(g_link_flags, MAX_FLAGS_SIZE, prefix, argv[++i]);
             }
         }
         else if (strncmp(arg, "-O", 2) == 0)
@@ -349,14 +327,14 @@ int main(int argc, char **argv)
             if (strlen(arg) > 2)
             {
                 optimization_level = arg + 2;
-                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O",
-                                 optimization_level);
+                append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O",
+                            optimization_level);
             }
             else if (i + 1 < argc)
             {
                 optimization_level = argv[++i];
-                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O",
-                                 optimization_level);
+                append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O",
+                            optimization_level);
             }
         }
         else if (strcmp(arg, "-g") == 0)
@@ -370,7 +348,7 @@ int main(int argc, char **argv)
         else if (strcmp(arg, "--release") == 0)
         {
             g_config.mode_debug = 0;
-            main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O3", NULL);
+            append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-O3", NULL);
         }
         else if (strncmp(arg, "-D", 2) == 0)
         {
@@ -397,7 +375,7 @@ int main(int argc, char **argv)
                     zwarn("maximum defined macros (64) exceeded, ignoring '%s'", def);
                 }
             }
-            main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-D", def);
+            append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-D", def);
         }
         else if (strncmp(arg, "-W", 2) == 0 || strncmp(arg, "-f", 2) == 0 ||
                  strncmp(arg, "-m", 2) == 0 || strncmp(arg, "-x", 2) == 0 ||
@@ -405,10 +383,10 @@ int main(int argc, char **argv)
                  strcmp(arg, "--shared") == 0)
         {
             // Standard C compiler flags that we want to pass directly to the backend
-            main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
+            append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
             if (strcmp(arg, "-shared") == 0 || strcmp(arg, "--shared") == 0)
             {
-                main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-fPIC", NULL);
+                append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-fPIC", NULL);
             }
             else if (!g_config.warn_as_errors && strcmp(arg, "-Werror") == 0)
             {
@@ -418,7 +396,7 @@ int main(int argc, char **argv)
         else if (arg[0] == '-')
         {
             // Unknown flag, pass to C compiler just in case
-            main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
+            append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), arg, NULL);
         }
         else
         {
@@ -694,42 +672,27 @@ int main(int argc, char **argv)
 
     if (!g_config.output_file && g_config.input_file)
     {
-        char *base = xstrdup(g_config.input_file);
+        char *base = z_basename(g_config.input_file);
+        char *stripped = z_strip_ext(base);
+        free(base);
 
-        // Strip directory
-        char *last_slash = strrchr(base, '/');
-        char *last_bslash = strrchr(base, '\\');
-        char *last_sep = last_slash > last_bslash ? last_slash : last_bslash;
-        if (last_sep)
-        {
-            size_t new_len = strlen(last_sep + 1);
-            memmove(base, last_sep + 1, new_len + 1);
-        }
-
-        // Strip extension
-        char *last_dot = strrchr(base, '.');
-        if (last_dot)
-        {
-            *last_dot = '\0';
-        }
-
-        if (strlen(base) > 0)
+        if (strlen(stripped) > 0)
         {
             if (g_config.mode_transpile)
             {
-                char *with_ext = xmalloc(strlen(base) + strlen(ext) + 1);
-                sprintf(with_ext, "%s%s", base, ext);
+                char *with_ext = xmalloc(strlen(stripped) + strlen(ext) + 1);
+                sprintf(with_ext, "%s%s", stripped, ext);
                 g_config.output_file = with_ext;
-                free(base);
+                free(stripped);
             }
             else
             {
-                g_config.output_file = base;
+                g_config.output_file = stripped;
             }
         }
         else
         {
-            free(base);
+            free(stripped);
         }
     }
 
@@ -792,7 +755,7 @@ int main(int argc, char **argv)
 
     if (g_config.mode_debug)
     {
-        main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
+        append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
     }
 
     ArgList compile_args;
@@ -814,7 +777,7 @@ int main(int argc, char **argv)
     if (g_config.mode_debug && g_config.mode_run)
     {
         // Debug requires -g
-        main_append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
+        append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
 
         if (!optimization_level)
         {

@@ -177,6 +177,21 @@ char *load_file(const char *filename);
  */
 char *sanitize_path_for_c_string(const char *path);
 
+/**
+ * @brief Get the basename of a path (strips director).
+ */
+char *z_basename(const char *path);
+
+/**
+ * @brief Strips the extension from a filename.
+ */
+char *z_strip_ext(const char *filename);
+
+/**
+ * @brief Appends a flag to a buffer with space handling and overflow protection.
+ */
+void append_flag(char *dest, size_t max_size, const char *prefix, const char *val);
+
 // ** Buffer Size Constants **
 #define MAX_FLAGS_SIZE 1024
 #define MAX_PATH_SIZE 1024

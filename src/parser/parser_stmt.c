@@ -4199,7 +4199,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
         }
         else if (curr->type == NODE_ENUM)
         {
-            emit_enum_protos(curr, f);
+            emit_enum_protos(&cctx, curr, f);
         }
         else if (curr->type == NODE_CONST)
         {

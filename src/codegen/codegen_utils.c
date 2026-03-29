@@ -3,6 +3,8 @@
 #include "../parser/parser.h"
 #include "../zprep.h"
 #include "codegen.h"
+#include "../ast/primitives.h"
+#include <ctype.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,7 +94,7 @@ void emit_c_decl(ParserContext *ctx, FILE *out, const char *type_str, const char
                 snprintf(mangled_candidate, 256, "%.*s_%.*s", base_len, type_str, arg_len,
                          generic + 1);
 
-                if (find_struct_def_codegen(ctx, mangled_candidate))
+                if (find_struct_def(ctx, mangled_candidate))
                 {
                     fprintf(out, "%s %s", mangled_candidate, name);
                     success = 1;
@@ -132,46 +134,6 @@ void emit_var_decl_type(ParserContext *ctx, FILE *out, const char *type_str, con
     emit_c_decl(ctx, out, type_str, var_name);
 }
 
-// Find struct definition
-ASTNode *find_struct_def_codegen(ParserContext *ctx, const char *name)
-{
-    if (!name)
-    {
-        return NULL;
-    }
-    ASTNode *s = global_user_structs;
-    while (s)
-    {
-        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0 && !s->strct.is_incomplete)
-        {
-            return s;
-        }
-        s = s->next;
-    }
-
-    // Check parsed structs list (imports)-
-    StructRef *sr = ctx->parsed_structs_list;
-    while (sr)
-    {
-        if (sr->node && sr->node->type == NODE_STRUCT && strcmp(sr->node->strct.name, name) == 0 &&
-            !sr->node->strct.is_incomplete)
-        {
-            return sr->node;
-        }
-        sr = sr->next;
-    }
-    s = ctx->instantiated_structs;
-    while (s)
-    {
-        if (s->type == NODE_STRUCT && strcmp(s->strct.name, name) == 0 && !s->strct.is_incomplete)
-        {
-            return s;
-        }
-        s = s->next;
-    }
-    return NULL;
-}
-
 // Get field type from struct.
 char *get_field_type_str(ParserContext *ctx, const char *struct_name, const char *field_name)
 {
@@ -185,7 +147,7 @@ char *get_field_type_str(ParserContext *ctx, const char *struct_name, const char
         *ptr = 0;
     }
 
-    ASTNode *def = find_struct_def_codegen(ctx, clean_name);
+    ASTNode *def = find_struct_def(ctx, clean_name);
     if (!def)
     {
         return NULL;
@@ -213,7 +175,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
 
     if (node->type_info && node->type_info->kind != TYPE_UNKNOWN)
     {
-        char *t = codegen_type_to_string(node->type_info);
+        char *t = type_to_c_string(node->type_info);
         return t;
     }
 
@@ -267,7 +229,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
     {
         if (node->type_info)
         {
-            return codegen_type_to_string(node->type_info);
+            return type_to_c_string(node->type_info);
         }
         return NULL;
     }
@@ -283,7 +245,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
             }
             if (sym->type_info)
             {
-                return codegen_type_to_string(sym->type_info);
+                return type_to_c_string(sym->type_info);
             }
         }
     }
@@ -299,7 +261,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 {
                     if (sig->ret_type)
                     {
-                        char *inner = codegen_type_to_string(sig->ret_type);
+                        char *inner = type_to_c_string(sig->ret_type);
                         if (inner)
                         {
                             char *buf = xmalloc(strlen(inner) + 10);
@@ -311,7 +273,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 }
                 if (sig->ret_type)
                 {
-                    return codegen_type_to_string(sig->ret_type);
+                    return type_to_c_string(sig->ret_type);
                 }
             }
 
@@ -325,7 +287,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
             {
                 return "void*";
             }
-            ASTNode *sdef = find_struct_def_codegen(ctx, node->call.callee->var_ref.name);
+            ASTNode *sdef = find_struct_def(ctx, node->call.callee->var_ref.name);
             if (sdef)
             {
                 return node->call.callee->var_ref.name;
@@ -357,7 +319,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 FuncSig *sig = find_func(ctx, func_name);
                 if (sig && sig->ret_type)
                 {
-                    return codegen_type_to_string(sig->ret_type);
+                    return type_to_c_string(sig->ret_type);
                 }
             }
         }
@@ -368,7 +330,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
             if (sym && sym->type_info && sym->type_info->kind == TYPE_FUNCTION &&
                 sym->type_info->inner)
             {
-                return codegen_type_to_string(sym->type_info->inner);
+                return type_to_c_string(sym->type_info->inner);
             }
         }
     }
@@ -401,7 +363,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 search_name += 7;
             }
 
-            ASTNode *def = find_struct_def_codegen(ctx, search_name);
+            ASTNode *def = find_struct_def(ctx, search_name);
             if (!def)
             {
                 // check enums list explicitly if not found in instantiated list
@@ -430,7 +392,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                         {
                             if (var->variant.payload)
                             {
-                                return codegen_type_to_string(var->variant.payload);
+                                return type_to_c_string(var->variant.payload);
                             }
                             // Ok with no payload? Then it's void/u0.
                             return "void";
@@ -552,11 +514,11 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
                 search_name += 7;
             }
 
-            ASTNode *def = find_struct_def_codegen(ctx, search_name);
+            ASTNode *def = find_struct_def(ctx, search_name);
             if (def && def->type_info && def->type_info->kind == TYPE_VECTOR &&
                 def->type_info->inner)
             {
-                return codegen_type_to_string(def->type_info->inner);
+                return type_to_c_string(def->type_info->inner);
             }
         }
         return "int";
@@ -629,7 +591,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
             FuncSig *sig = find_func(ctx, node->unary.operand->call.callee->var_ref.name);
             if (sig && sig->ret_type)
             {
-                return codegen_type_to_string(sig->ret_type);
+                return type_to_c_string(sig->ret_type);
             }
         }
 
@@ -650,7 +612,7 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
     {
         if (node->type_info)
         {
-            return codegen_type_to_string(node->type_info);
+            return type_to_c_string(node->type_info);
         }
         return NULL;
     }
@@ -803,13 +765,6 @@ void emit_auto_type(ParserContext *ctx, ASTNode *init_expr, Token t, FILE *out)
         }
     }
 }
-// C-compatible type stringifier for codegen.
-// Identical to type_to_string but strictly uses 'struct T' for structs to support
-// external/non-typedef'd types.
-char *codegen_type_to_string(Type *t)
-{
-    return type_to_c_string(t);
-}
 
 // Emit function signature using Type info for correct C codegen
 void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const char *name_override)
@@ -840,7 +795,7 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
     char *ret_str;
     if (func->func.ret_type_info)
     {
-        ret_str = codegen_type_to_string(func->func.ret_type_info);
+        ret_str = type_to_c_string(func->func.ret_type_info);
     }
     else if (func->func.ret_type)
     {
@@ -889,7 +844,7 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
             }
             else if (func->func.arg_types && func->func.arg_types[i])
             {
-                type_str = codegen_type_to_string(func->func.arg_types[i]);
+                type_str = type_to_c_string(func->func.arg_types[i]);
             }
             else
             {
@@ -1089,22 +1044,40 @@ void codegen_expression_with_move(ParserContext *ctx, ASTNode *node, FILE *out)
 
 int is_struct_return_type(const char *ret_type)
 {
-    if (ret_type && strcmp(ret_type, "int") != 0 && strcmp(ret_type, "bool") != 0 &&
-        strcmp(ret_type, "char") != 0 && strcmp(ret_type, "float") != 0 &&
-        strcmp(ret_type, "double") != 0 && strcmp(ret_type, "long") != 0 &&
-        strcmp(ret_type, "usize") != 0 && strcmp(ret_type, "isize") != 0 &&
-        strcmp(ret_type, "byte") != 0 && strcmp(ret_type, "rune") != 0 &&
-        strcmp(ret_type, "size_t") != 0 && strcmp(ret_type, "ptrdiff_t") != 0 &&
-        strcmp(ret_type, "ssize_t") != 0 && strncmp(ret_type, "uint", 4) != 0 &&
-        strncmp(ret_type, "int", 3) != 0 && strncmp(ret_type, "i8", 2) != 0 &&
-        strncmp(ret_type, "u8", 2) != 0 && strncmp(ret_type, "i16", 3) != 0 &&
-        strncmp(ret_type, "u16", 3) != 0 && strncmp(ret_type, "i32", 3) != 0 &&
-        strncmp(ret_type, "u32", 3) != 0 && strncmp(ret_type, "i64", 3) != 0 &&
-        strncmp(ret_type, "u64", 3) != 0 && strncmp(ret_type, "f32", 3) != 0 &&
-        strncmp(ret_type, "f64", 3) != 0 && strncmp(ret_type, "i128", 4) != 0 &&
-        strncmp(ret_type, "u128", 4) != 0)
+    if (!ret_type)
     {
-        return 1;
+        return 0;
     }
-    return 0;
+
+    // Primitives from table (both Zen and C names)
+    if (find_primitive_by_name(ret_type) || find_primitive_by_c_name(ret_type))
+    {
+        return 0;
+    }
+
+    // C types that might be used directly
+    if (strcmp(ret_type, "size_t") == 0 || strcmp(ret_type, "ptrdiff_t") == 0 ||
+        strcmp(ret_type, "ssize_t") == 0 || strcmp(ret_type, "intptr_t") == 0 ||
+        strcmp(ret_type, "uintptr_t") == 0)
+    {
+        return 0;
+    }
+
+    // C23 BitInt Support (i42, u256, etc.)
+    if ((ret_type[0] == 'i' || ret_type[0] == 'u') && isdigit(ret_type[1]))
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
+int z_is_struct_type(Type *t)
+{
+    if (!t)
+    {
+        return 0;
+    }
+    Type *base = get_inner_type(t);
+    return (base->kind == TYPE_STRUCT || base->kind == TYPE_ENUM);
 }

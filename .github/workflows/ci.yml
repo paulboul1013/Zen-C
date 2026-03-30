@@ -91,6 +91,15 @@ jobs:
           ./tests/scripts/run_tests.sh --cc "${{ matrix.cc }}"
         fi
 
+  test-lsp:
+    name: LSP Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build and Run LSP Tests
+      run: |
+        make test-lsp
+
   ape:
     name: Build APE
     runs-on: ubuntu-latest

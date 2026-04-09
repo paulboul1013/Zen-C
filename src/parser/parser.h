@@ -333,9 +333,10 @@ struct ParserContext
     ZenSymbol *all_symbols; ///< comprehensive list of all symbols seen.
 
     // External C interop: suppress undefined warnings for external symbols
-    int has_external_includes; ///< Set when `#include <...>` is used.
-    char **extern_symbols;     ///< Explicitly declared extern symbols.
-    int extern_symbol_count;   ///< Count of external symbols.
+    int has_external_includes;
+    int is_comptime;         // Flag for comptime execution context
+    char **extern_symbols;   ///< Explicitly declared extern symbols.
+    int extern_symbol_count; ///< Count of external symbols.
 
     // Codegen state:
     FILE *hoist_out;    ///< File stream for hoisting code (e.g. from plugins).

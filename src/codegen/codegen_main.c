@@ -336,8 +336,9 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
             fprintf(out, "// Auto-Generated RAII Glue for %s\n", sname);
             fprintf(out, "void %s__Drop__glue(%s *self) {\n", sname, sname);
 
-            int has_manual_drop = check_impl(ctx, "Drop", sname);
-            if (has_manual_drop)
+            char glue_mangled[512];
+            snprintf(glue_mangled, sizeof(glue_mangled), "%s__Drop__drop", sname);
+            if (find_func(ctx, glue_mangled))
             {
                 fprintf(out, "    %s__Drop__drop(self);\n", sname);
             }
@@ -366,6 +367,27 @@ static void emit_auto_drop_glues(ParserContext *ctx, ASTNode *structs, FILE *out
         }
         s = s->next;
     }
+}
+
+static void emit_generic_drop_macro(ParserContext *ctx, ASTNode *structs, FILE *out)
+{
+    (void)ctx;
+    fprintf(out, "// Global Generic Drop Dispatch\n");
+    fprintf(out, "#define _z_drop(x) _Generic((x)");
+
+    ASTNode *s = structs;
+    while (s)
+    {
+        if (s->type == NODE_STRUCT && s->type_info && s->type_info->traits.has_drop &&
+            !s->strct.is_template)
+        {
+            char *sname = s->strct.name;
+            fprintf(out, ", \\\n    %s: %s__Drop__glue((void*)&(x))", sname, sname);
+        }
+        s = s->next;
+    }
+
+    fprintf(out, ", \\\n    default: (void)0)\n\n");
 }
 
 // Main entry point for code generation.
@@ -775,6 +797,7 @@ void codegen_node(ParserContext *ctx, ASTNode *node, FILE *out)
 
         emit_impl_vtables(ctx, out);
         emit_auto_drop_glues(ctx, sorted, out);
+        emit_generic_drop_macro(ctx, sorted, out);
 
         emit_lambda_defs(ctx, out);
 

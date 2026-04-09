@@ -1727,7 +1727,9 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 {
     int saved_silent = ctx->silent_warnings;
     ctx->silent_warnings = !check_symbols;
-    char *gen = xmalloc(8192);
+    char *gen = xmalloc(1024 * 32); // 32 KB should be enough for any reasonable string
+    gen[0] = 0;
+    char buf[2048]; // Function-scope buffer for all interpolation paths
     strcpy(gen, "({ ");
 
     char *s = xstrdup(content);
@@ -1759,7 +1761,6 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         if (brace > cur)
         {
             // Append text literal
-            char buf[256];
             sprintf(buf, "fprintf(%s, \"%%s\", \"", target);
             strcat(gen, buf);
 
@@ -1926,6 +1927,31 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         int to_string_is_ptr = 0;
         char *to_string_struct_name = NULL;
 
+        int is_temporary = 1;
+        int is_simple_type = 0;
+        if (expr_node)
+        {
+            if (expr_node->type == NODE_EXPR_VAR || expr_node->type == NODE_EXPR_MEMBER ||
+                expr_node->type == NODE_EXPR_INDEX)
+            {
+                is_temporary = 0;
+            }
+
+            Type *t = expr_node->type_info;
+            if (t && t->kind != TYPE_STRUCT && t->kind != TYPE_ENUM && t->kind != TYPE_UNKNOWN &&
+                t->kind != TYPE_ALIAS)
+            {
+                is_simple_type = 1;
+            }
+        }
+        else if (clean_expr[0] == '"' || clean_expr[0] == '\'' || isdigit(clean_expr[0]))
+        {
+            is_simple_type = 1;
+        }
+
+        // Bypassing RAII and capture for comptime contexts
+        int force_simple = is_simple_type || ctx->is_comptime || !is_temporary;
+
         if (expr_node)
         {
             // Check for to_string conversion on struct types
@@ -1964,7 +1990,7 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         // Always codegen the base expression first
         if (expr_node)
         {
-            char *buf = NULL;
+            char *expr_buf = NULL;
             size_t len = 0;
             FILE *ms = tmpfile();
             if (ms)
@@ -1972,11 +1998,11 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                 codegen_expression(ctx, expr_node, ms);
                 len = ftell(ms);
                 fseek(ms, 0, SEEK_SET);
-                buf = xmalloc(len + 1);
-                fread(buf, 1, len, ms);
-                buf[len] = 0;
+                expr_buf = xmalloc(len + 1);
+                fread(expr_buf, 1, len, ms);
+                expr_buf[len] = 0;
                 fclose(ms);
-                rw_expr = buf;
+                rw_expr = expr_buf;
                 used_codegen = 1;
             }
         }
@@ -1989,11 +2015,17 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         if (fmt)
         {
             // Explicit format: {x:%.2f}
-            char buf[512];
-            sprintf(
-                buf,
-                "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", _z_interp_val); }); ",
-                rw_expr, target, fmt);
+            if (force_simple)
+            {
+                sprintf(buf, "fprintf(%s, \"%%%s\", %s); ", target, fmt, rw_expr);
+            }
+            else
+            {
+                sprintf(buf,
+                        "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
+                        "_z_interp_val); _z_drop(_z_interp_val); }); ",
+                        rw_expr, target, fmt);
+            }
             strcat(gen, buf);
         }
         else
@@ -2073,12 +2105,21 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                             (strstr(data_type, "char") || strstr(data_type, "u8") ||
                              strstr(data_type, "byte")))
                         {
-                            char buf[512];
                             const char *acc = is_p ? "->" : ".";
-                            sprintf(buf,
+                            if (force_simple)
+                            {
+                                sprintf(buf, "fprintf(%s, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); ",
+                                        target, rw_expr, acc, rw_expr, acc);
+                            }
+                            else
+                            {
+                                sprintf(
+                                    buf,
                                     "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%.*s\", "
-                                    "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); }); ",
-                                    rw_expr ? rw_expr : expr, target, acc, acc);
+                                    "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); "
+                                    "_z_drop(_z_interp_val); }); ",
+                                    rw_expr, target, acc, acc);
+                            }
                             strcat(gen, buf);
                             goto next_segment;
                         }
@@ -2112,12 +2153,21 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
                             (strstr(data_type, "char") || strstr(data_type, "u8") ||
                              strstr(data_type, "byte")))
                         {
-                            char buf[512];
                             const char *acc = is_p ? "->" : ".";
-                            sprintf(buf,
+                            if (force_simple)
+                            {
+                                sprintf(buf, "fprintf(%s, \"%%.*s\", (int)(%s)%slen, (%s)%sdata); ",
+                                        target, rw_expr, acc, rw_expr, acc);
+                            }
+                            else
+                            {
+                                sprintf(
+                                    buf,
                                     "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%.*s\", "
-                                    "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); }); ",
+                                    "(int)(_z_interp_val)%slen, (_z_interp_val)%sdata); "
+                                    "_z_drop(_z_interp_val); }); ",
                                     rw_expr, target, acc, acc);
+                            }
                             strcat(gen, buf);
                             goto next_segment;
                         }
@@ -2233,40 +2283,71 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
             if (format_spec)
             {
-                char buf[512];
                 if (is_bool)
                 {
-                    sprintf(buf,
-                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
-                            "_z_bool_str(_z_interp_val)); }); ",
-                            rw_expr, target, format_spec + 1); // skip % in format_spec
+                    if (force_simple)
+                    {
+                        sprintf(buf, "fprintf(%s, \"%%%s\", _z_bool_str(%s)); ", target,
+                                format_spec + 1, rw_expr);
+                    }
+                    else
+                    {
+                        sprintf(buf,
+                                "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
+                                "_z_bool_str(_z_interp_val)); _z_drop(_z_interp_val); }); ",
+                                rw_expr, target, format_spec + 1);
+                    }
                 }
                 else
                 {
-                    sprintf(buf,
-                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
-                            "_z_interp_val); }); ",
-                            rw_expr, target, format_spec + 1);
+                    if (force_simple)
+                    {
+                        sprintf(buf, "fprintf(%s, \"%%%s\", %s); ", target, format_spec + 1,
+                                rw_expr);
+                    }
+                    else
+                    {
+                        sprintf(buf,
+                                "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%%s\", "
+                                "_z_interp_val); _z_drop(_z_interp_val); }); ",
+                                rw_expr, target, format_spec + 1);
+                    }
                 }
                 strcat(gen, buf);
             }
             else
             {
                 // Fallback to runtime macro
-                char buf[512];
                 if (mangled_to_string)
                 {
-                    sprintf(buf,
-                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%s\", "
-                            "(char*)%s(%s_z_interp_val)); }); ",
-                            rw_expr, target, mangled_to_string, to_string_is_ptr ? "" : "&");
+                    if (force_simple && !is_temporary)
+                    {
+                        sprintf(buf, "fprintf(%s, \"%%s\", (char*)%s(%s%s)); ", target,
+                                mangled_to_string, to_string_is_ptr ? "" : "&", rw_expr);
+                    }
+                    else
+                    {
+                        sprintf(buf,
+                                "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, \"%%s\", "
+                                "(char*)%s(%s_z_interp_val)); _z_drop(_z_interp_val); }); ",
+                                rw_expr, target, mangled_to_string, to_string_is_ptr ? "" : "&");
+                    }
                 }
                 else
                 {
-                    sprintf(buf,
-                            "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, "
-                            "_z_str(_z_interp_val), _z_arg(_z_interp_val)); }); ",
-                            rw_expr, target);
+                    if (force_simple)
+                    {
+                        sprintf(buf, "fprintf(%s, _z_str(%s), _z_arg(%s)); ", target, rw_expr,
+                                rw_expr);
+                    }
+                    else
+                    {
+                        sprintf(buf,
+                                "({ ZC_AUTO_INIT(_z_interp_val, %s); fprintf(%s, "
+                                "_z_str(_z_interp_val), _z_arg(_z_interp_val)); "
+                                "_z_drop(_z_interp_val); }); ",
+                                rw_expr, target);
+                    }
                 }
                 strcat(gen, buf);
             }
@@ -2296,7 +2377,6 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
 
     if (newline)
     {
-        char buf[128];
         sprintf(buf, "fprintf(%s, \"\\n\"); ", target);
         strcat(gen, buf);
     }
@@ -4149,6 +4229,7 @@ char *run_comptime_block(ParserContext *ctx, Lexer *l)
     register_builtins(&cctx);
     register_comptime_builtins(&cctx);
     cctx.has_external_includes = 1; // Suppress undefined warnings for comptime helpers
+    cctx.is_comptime = 1;
 
     ASTNode *block = parse_block(&cctx, &cl);
     ASTNode *nodes = block ? block->block.statements : NULL;

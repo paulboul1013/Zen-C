@@ -5,7 +5,7 @@ import "std/io.zc";
 
 extern fn abs(x: c_int) -> c_int;
 extern fn labs(x: c_long) -> c_long;
-extern fn llabs(x: c_long_long) -> c_long_long;
+extern fn llabs(x: c_longlong) -> c_longlong;
 
 fn main() -> int {
     // Portable types
@@ -22,7 +22,7 @@ fn main() -> int {
     // C Types
     let ca: c_int = -10;
     let cb: c_long = -20;
-    let cbll: c_long_long = -30;
+    let cbll: c_longlong = -30;
     let cc: c_short = -5;
     let cd: c_char = 65; // 'A'
     if (cc != -5) return 11;
@@ -38,7 +38,7 @@ fn main() -> int {
     if (labs_val != expected_labs) return 6;
 
     let labs_valLongLong = llabs(cbll);
-    let expected_labs_long_long: c_long_long = 30;
+    let expected_labs_long_long: c_longlong = 30;
     if (labs_valLongLong != expected_labs_long_long) return 7;
 
     // Size checks (these are platform dependent but we can check relations)

@@ -54,16 +54,16 @@ typedef enum
     TYPE_RUNE,   ///< `rune`.
     TYPE_UINT,   ///< `uint` (alias).
     // Portable C Types (FFI)
-    TYPE_C_INT,        ///< `c_int` (int).
-    TYPE_C_UINT,       ///< `c_uint` (unsigned int).
-    TYPE_C_LONG,       ///< `c_long` (long).
-    TYPE_C_ULONG,      ///< `c_ulong` (unsigned long).
-    TYPE_C_LONG_LONG,  ///< `c_long_long` (long long).
-    TYPE_C_ULONG_LONG, ///< `c_ulong_long` (unsigned long long).
-    TYPE_C_SHORT,      ///< `c_short` (short).
-    TYPE_C_USHORT,     ///< `c_ushort` (unsigned short).
-    TYPE_C_CHAR,       ///< `c_char` (char).
-    TYPE_C_UCHAR,      ///< `c_uchar` (unsigned char).
+    TYPE_C_INT,       ///< `c_int` (int).
+    TYPE_C_UINT,      ///< `c_uint` (unsigned int).
+    TYPE_C_LONG,      ///< `c_long` (long).
+    TYPE_C_ULONG,     ///< `c_ulong` (unsigned long).
+    TYPE_C_LONGLONG,  ///< `c_longlong` (long long).
+    TYPE_C_ULONGLONG, ///< `c_ulonglong` (unsigned long long).
+    TYPE_C_SHORT,     ///< `c_short` (short).
+    TYPE_C_USHORT,    ///< `c_ushort` (unsigned short).
+    TYPE_C_CHAR,      ///< `c_char` (char).
+    TYPE_C_UCHAR,     ///< `c_uchar` (unsigned char).
 
     TYPE_STRUCT,   ///< Struct type.
     TYPE_ENUM,     ///< Enum type.

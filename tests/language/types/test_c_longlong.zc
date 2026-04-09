@@ -1,0 +1,21 @@
+test "c_longlong_test" {
+    let a: c_longlong = 123456789012345;
+    let b: c_ulonglong = 123456789012345;
+    
+    println "a = {a}";
+    println "b = {b}";
+    
+    // Test casts (C-style)
+    let c = (c_longlong)a;
+    let d = (c_ulonglong)b;
+    
+    // Test sizeof
+    let s1 = sizeof(c_longlong);
+    let s2 = sizeof(c_ulonglong);
+    
+    println "s1 = {s1}";
+    println "s2 = {s2}";
+    
+    // Use the variables to avoid unused warnings
+    println "c = {c}, d = {d}";
+}

@@ -137,8 +137,8 @@ static int integer_type_width(Type *t)
     case TYPE_USIZE:
     case TYPE_C_LONG:
     case TYPE_C_ULONG:
-    case TYPE_C_LONG_LONG:
-    case TYPE_C_ULONG_LONG:
+    case TYPE_C_LONGLONG:
+    case TYPE_C_ULONGLONG:
         return 64;
     case TYPE_I128:
     case TYPE_U128:

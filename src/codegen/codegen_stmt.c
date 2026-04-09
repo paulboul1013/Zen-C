@@ -177,8 +177,8 @@ static bool is_int_type(TypeKind k)
     case TYPE_C_UINT:
     case TYPE_C_LONG:
     case TYPE_C_ULONG:
-    case TYPE_C_LONG_LONG:
-    case TYPE_C_ULONG_LONG:
+    case TYPE_C_LONGLONG:
+    case TYPE_C_ULONGLONG:
     case TYPE_C_SHORT:
     case TYPE_C_USHORT:
     case TYPE_C_CHAR:

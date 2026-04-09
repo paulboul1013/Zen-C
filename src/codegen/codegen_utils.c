@@ -211,11 +211,11 @@ char *infer_type(ParserContext *ctx, ASTNode *node)
         {
             return "unsigned long";
         }
-        if (strcmp(node->resolved_type, "c_long_long") == 0)
+        if (strcmp(node->resolved_type, "c_longlong") == 0)
         {
             return "long long";
         }
-        if (strcmp(node->resolved_type, "c_ulong_long") == 0)
+        if (strcmp(node->resolved_type, "c_ulonglong") == 0)
         {
             return "unsigned long long";
         }

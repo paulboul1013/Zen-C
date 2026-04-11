@@ -824,7 +824,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
             {
                 int end_ident = i;
                 while (i >= 0 && (isalnum((unsigned char)ptr[i]) || ptr[i] == '_' ||
-                                  ptr[i] == '.' || ptr[i] == '-' || ptr[i] == '>'))
+                                  ptr[i] == '.' || ptr[i] == '-' || ptr[i] == '>' || ptr[i] == '<'))
                 {
                     i--;
                 }
@@ -933,7 +933,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
                                 src += 7;
                             }
                             char *dst = clean_name;
-                            while (*src && *src != '*')
+                            while (*src && *src != '*' && *src != '<' && *src != '[')
                             {
                                 *dst++ = *src++;
                             }
@@ -983,7 +983,7 @@ void lsp_completion(const char *uri, int line, int col, int id)
                             }
 
                             char *dst = clean_name;
-                            while (*src && *src != '*')
+                            while (*src && *src != '*' && *src != '<' && *src != '[')
                             {
                                 *dst++ = *src++;
                             }
@@ -1016,6 +1016,41 @@ void lsp_completion(const char *uri, int line, int col, int id)
                                     break;
                                 }
                                 sd = sd->next;
+                            }
+
+                            // Show methods (Struct::Method)
+                            FuncSig *fn_sig = g_project->ctx->func_registry;
+                            char method_prefix[256];
+                            snprintf(method_prefix, sizeof(method_prefix), "%s::", clean_name);
+                            while (fn_sig)
+                            {
+                                if (strncmp(fn_sig->name, method_prefix, strlen(method_prefix)) ==
+                                    0)
+                                {
+                                    cJSON *item = cJSON_CreateObject();
+                                    const char *method_name = fn_sig->name + strlen(method_prefix);
+                                    cJSON_AddStringToObject(item, "label", method_name);
+                                    cJSON_AddNumberToObject(item, "kind", 2); // Method
+                                    char detail[MAX_SHORT_MSG_LEN];
+                                    snprintf(detail, sizeof(detail), "fn %s", fn_sig->name);
+                                    cJSON_AddStringToObject(item, "detail", detail);
+
+                                    // Snippet format
+                                    char snippet[MAX_VAR_NAME_LEN];
+                                    if (fn_sig->total_args > 0)
+                                    {
+                                        snprintf(snippet, sizeof(snippet), "%s($1)", method_name);
+                                    }
+                                    else
+                                    {
+                                        snprintf(snippet, sizeof(snippet), "%s()", method_name);
+                                    }
+                                    cJSON_AddStringToObject(item, "insertText", snippet);
+                                    cJSON_AddNumberToObject(item, "insertTextFormat", 2);
+
+                                    cJSON_AddItemToArray(items, item);
+                                }
+                                fn_sig = fn_sig->next;
                             }
                             free(type_name);
                         }

@@ -642,6 +642,10 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                              ASTNode ***default_values_out, int *count_out, Type ***types_out,
                              char ***names_out, int *is_varargs_out, char ***ctype_overrides_out);
 
+char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *content, int newline,
+                           const char *target, char ***used_syms, int *used_count, int is_stmt,
+                           int is_raw);
+
 /**
  * @brief Scan build directives.
  */
@@ -700,8 +704,16 @@ void print_type_defs(ParserContext *ctx, FILE *out, ASTNode *nodes);
 // String manipulation
 
 /**
+ * @brief Extracts the inner content of a string literal token.
+ * Handles single-line, multi-line, f-string and raw string formats.
+ * caller must free the returned string.
+ */
+char *token_get_string_content(Token t);
+
+/**
  * @brief Replaces a substring in a string.
  */
+
 char *replace_in_string(const char *src, const char *old_w, const char *new_w);
 
 /**
@@ -977,7 +989,8 @@ ASTNode *parse_return(ParserContext *ctx, Lexer *l);
  */
 char *escape_c_string(const char *input);
 char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *content, int newline,
-                           const char *target, char ***used_syms, int *count, int check_symbols);
+                           const char *target, char ***used_syms, int *count, int check_symbols,
+                           int is_raw);
 
 /**
  * @brief Parses an assert statement.

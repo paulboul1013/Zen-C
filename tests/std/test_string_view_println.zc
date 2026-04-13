@@ -36,3 +36,23 @@ test "println_robustness_builtin_slice" {
     let s: [char] = Slice_char{data: val, len: (usize)7, cap: (usize)7};
     println "{s}";
 }
+
+test "println_raw_strings" {
+    // Single-line raw string
+    println r"This is a raw string in println";
+    
+    // Multi-line raw string
+    println r"""
+Multi-line
+raw
+string
+in
+println
+""";
+
+    // Raw string with interpolation characters (should not interpolate)
+    // let x = 42;
+
+    println r"Value of {x} is {x}"; // Should literally print {x}
+}
+

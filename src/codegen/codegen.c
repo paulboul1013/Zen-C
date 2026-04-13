@@ -77,14 +77,37 @@ static void codegen_literal_expr(ASTNode *node, FILE *out)
         fprintf(out, "\"");
         for (int i = 0; node->literal.string_val[i]; i++)
         {
-            if (node->literal.type_kind == LITERAL_RAW_STRING &&
-                node->literal.string_val[i] == '\\')
+            char c = node->literal.string_val[i];
+            if (node->literal.type_kind == LITERAL_RAW_STRING)
             {
-                fprintf(out, "\\\\");
+                if (c == '\\')
+                {
+                    fprintf(out, "\\\\");
+                }
+                else if (c == '"')
+                {
+                    fprintf(out, "\\\"");
+                }
+                else if (c == '\n')
+                {
+                    fprintf(out, "\\n");
+                }
+                else if (c == '\r')
+                {
+                    fprintf(out, "\\r");
+                }
+                else if (c == '\t')
+                {
+                    fprintf(out, "\\t");
+                }
+                else
+                {
+                    fprintf(out, "%c", c);
+                }
             }
             else
             {
-                fprintf(out, "%c", node->literal.string_val[i]);
+                fprintf(out, "%c", c);
             }
         }
         fprintf(out, "\"");

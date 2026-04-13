@@ -1791,19 +1791,18 @@ static ASTNode *parse_float_literal(Token t)
 // Parse string literal
 static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
 {
-    int is_multi = (t.len >= 6 && t.start[0] == '"' && t.start[1] == '"' && t.start[2] == '"');
-    int str_offset = is_multi ? 3 : 1;
-    int str_len = t.len - (is_multi ? 6 : 2);
+    char *content = token_get_string_content(t);
+    int str_len = (int)strlen(content);
 
     // Check for implicit interpolation
     int has_interpolation = 0;
-    for (int i = str_offset; i < str_offset + str_len; i++)
+    for (int i = 0; i < str_len; i++)
     {
-        if (t.start[i] == '{')
+        if (content[i] == '{')
         {
             // Ignore if part of \u{ or \U{
-            if (i >= str_offset + 2 && (t.start[i - 1] == 'u' || t.start[i - 1] == 'U') &&
-                t.start[i - 2] == '\\')
+            if (i >= 2 && (content[i - 1] == 'u' || content[i - 1] == 'U') &&
+                content[i - 2] == '\\')
             {
                 continue;
             }
@@ -1814,7 +1813,8 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
 
     if (has_interpolation)
     {
-        ASTNode *node = create_fstring_block(ctx, t, (char *)t.start + str_offset, str_len);
+        ASTNode *node = create_fstring_block(ctx, t, content, str_len);
+        free(content);
         return node;
     }
 
@@ -1822,12 +1822,8 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
     node->token = t;
     node->literal.type_kind = LITERAL_STRING;
 
-    char *tmp = xmalloc(str_len + 1);
-    strncpy(tmp, t.start + str_offset, str_len);
-    tmp[str_len] = 0;
-
-    node->literal.string_val = escape_c_string(tmp);
-    free(tmp);
+    node->literal.string_val = escape_c_string(content);
+    free(content);
 
     node->type_info = type_new(TYPE_STRING);
     return node;
@@ -1836,11 +1832,9 @@ static ASTNode *parse_string_literal(ParserContext *ctx, Token t)
 // Parse f-string literal
 static ASTNode *parse_fstring_literal(ParserContext *ctx, Token t)
 {
-    int is_multi = (t.len >= 7 && t.start[1] == '"' && t.start[2] == '"' && t.start[3] == '"');
-    int str_offset = is_multi ? 4 : 2;
-    int str_len = t.len - (is_multi ? 7 : 3);
-
-    ASTNode *node = create_fstring_block(ctx, t, (char *)t.start + str_offset, str_len);
+    char *content = token_get_string_content(t);
+    ASTNode *node = create_fstring_block(ctx, t, content, (int)strlen(content));
+    free(content);
     return node;
 }
 
@@ -2218,11 +2212,10 @@ ASTNode *parse_primary(ParserContext *ctx, Lexer *l)
         node = ast_create(NODE_EXPR_LITERAL);
         node->token = t;
         node->literal.type_kind = LITERAL_RAW_STRING;
-        node->literal.string_val = xmalloc(t.len - 2);
-        strncpy(node->literal.string_val, t.start + 2, t.len - 3);
-        node->literal.string_val[t.len - 3] = 0;
+        node->literal.string_val = token_get_string_content(t);
         node->type_info = type_new(TYPE_STRING);
     }
+
     else if (t.type == TOK_CHAR)
     {
         node = parse_char_literal(t);
@@ -5135,25 +5128,17 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         lexer_next(&lookahead);
         Token next = lexer_peek(&lookahead);
 
-        if (next.type == TOK_STRING || next.type == TOK_FSTRING)
+        if (next.type == TOK_STRING || next.type == TOK_FSTRING || next.type == TOK_RAW_STRING)
         {
             lexer_next(l); // consume '?'
             Token t_str = lexer_next(l);
 
-            char *inner = xmalloc(t_str.len);
-            if (t_str.type == TOK_FSTRING)
-            {
-                strncpy(inner, t_str.start + 2, t_str.len - 3);
-                inner[t_str.len - 3] = 0;
-            }
-            else
-            {
-                strncpy(inner, t_str.start + 1, t_str.len - 2);
-                inner[t_str.len - 2] = 0;
-            }
+            char *inner = token_get_string_content(t_str);
+            int is_raw = (t_str.type == TOK_RAW_STRING);
 
             // Reuse printf sugar to generate the prompt print
-            char *print_code = process_printf_sugar(ctx, t_str, inner, 0, "stdout", NULL, NULL, 1);
+            char *print_code =
+                process_printf_sugar(ctx, t_str, inner, 0, "stdout", NULL, NULL, 1, is_raw);
             free(inner);
 
             // Checks for (args...) suffix for SCAN mode
@@ -5402,22 +5387,13 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
         lexer_next(&lookahead);
         Token next = lexer_peek(&lookahead);
 
-        if (next.type == TOK_STRING || next.type == TOK_FSTRING)
+        if (next.type == TOK_STRING || next.type == TOK_FSTRING || next.type == TOK_RAW_STRING)
         {
             lexer_next(l); // consume '!'
             Token t_str = lexer_next(l);
 
-            char *inner = xmalloc(t_str.len);
-            if (t_str.type == TOK_FSTRING)
-            {
-                strncpy(inner, t_str.start + 2, t_str.len - 3);
-                inner[t_str.len - 3] = 0;
-            }
-            else
-            {
-                strncpy(inner, t_str.start + 1, t_str.len - 2);
-                inner[t_str.len - 2] = 0;
-            }
+            char *inner = token_get_string_content(t_str);
+            int is_raw = (t_str.type == TOK_RAW_STRING);
 
             // Check for .. suffix (.. suppresses newline)
             int newline = 1;
@@ -5428,7 +5404,7 @@ ASTNode *parse_expr_prec(ParserContext *ctx, Lexer *l, Precedence min_prec)
             }
 
             char *code =
-                process_printf_sugar(ctx, lexer_peek(l), inner, newline, "stderr", NULL, NULL, 1);
+                process_printf_sugar(ctx, t_str, inner, newline, "stderr", NULL, NULL, 1, is_raw);
             free(inner);
 
             ASTNode *n = ast_create(NODE_RAW_STMT);

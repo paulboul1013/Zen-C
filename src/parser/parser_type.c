@@ -843,13 +843,16 @@ ASTNode *parse_embed(ParserContext *ctx, Lexer *l)
 {
     lexer_next(l);
     Token t = lexer_next(l);
-    if (t.type != TOK_STRING)
+    if (t.type != TOK_STRING && t.type != TOK_RAW_STRING)
+
     {
         zpanic_at(t, "String required");
     }
+    char *content = token_get_string_content(t);
     char fn[MAX_PATH_LEN];
-    strncpy(fn, t.start + 1, t.len - 2);
-    fn[t.len - 2] = 0;
+    strncpy(fn, content, MAX_PATH_LEN - 1);
+    fn[MAX_PATH_LEN - 1] = 0;
+    free(content);
 
     // Check for optional "as Type"
     Type *target_type = NULL;

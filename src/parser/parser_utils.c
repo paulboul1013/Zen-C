@@ -383,6 +383,45 @@ char *token_strdup(Token t)
     return s;
 }
 
+char *token_get_string_content(Token t)
+{
+    int is_multi = 0;
+    int is_fstring = (t.type == TOK_FSTRING);
+    int is_raw = (t.type == TOK_RAW_STRING);
+    int start_offset = 1;
+    int end_offset = 1;
+
+    if (is_fstring)
+    {
+        is_multi = (t.len >= 7 && t.start[1] == '"' && t.start[2] == '"' && t.start[3] == '"');
+        start_offset = is_multi ? 4 : 2;
+        end_offset = is_multi ? 3 : 1;
+    }
+    else if (is_raw)
+    {
+        is_multi = (t.len >= 7 && t.start[1] == '"' && t.start[2] == '"' && t.start[3] == '"');
+        start_offset = is_multi ? 4 : 2;
+        end_offset = is_multi ? 3 : 1;
+    }
+    else // TOK_STRING
+    {
+        is_multi = (t.len >= 6 && t.start[0] == '"' && t.start[1] == '"' && t.start[2] == '"');
+        start_offset = is_multi ? 3 : 1;
+        end_offset = is_multi ? 3 : 1;
+    }
+
+    int content_len = t.len - start_offset - end_offset;
+    if (content_len < 0)
+    {
+        content_len = 0;
+    }
+
+    char *content = xmalloc(content_len + 1);
+    strncpy(content, t.start + start_offset, content_len);
+    content[content_len] = '\0';
+    return content;
+}
+
 void skip_comments(Lexer *l)
 {
     while (lexer_peek(l).type == TOK_COMMENT)

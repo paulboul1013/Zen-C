@@ -968,15 +968,13 @@ ASTNode *parse_test(ParserContext *ctx, Lexer *l)
 {
     lexer_next(l); // eat 'test'
     Token t = lexer_next(l);
-    if (t.type != TOK_STRING)
+    if (t.type != TOK_STRING && t.type != TOK_RAW_STRING)
     {
         zpanic_at(t, "Test name must be a string literal");
     }
 
     // Strip quotes for AST storage
-    char *name = xmalloc(t.len);
-    strncpy(name, t.start + 1, t.len - 2);
-    name[t.len - 2] = 0;
+    char *name = token_get_string_content(t);
 
     ASTNode *body = parse_block(ctx, l);
 
@@ -1870,7 +1868,9 @@ ASTNode *parse_for(ParserContext *ctx, Lexer *l)
 }
 
 char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *content, int newline,
-                           const char *target, char ***used_syms, int *count, int check_symbols)
+                           const char *target, char ***used_syms, int *count, int check_symbols,
+                           int is_raw)
+
 {
     int saved_silent = ctx->silent_warnings;
     ctx->silent_warnings = !check_symbols;
@@ -1887,7 +1887,8 @@ char *process_printf_sugar(ParserContext *ctx, Token srctoken, const char *conte
         char *brace = cur;
         while (*brace)
         {
-            if (*brace == '{')
+            if (*brace == '{' && !is_raw)
+
             {
                 if (brace[1] == '{')
                 {
@@ -2736,7 +2737,7 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
         return raw_s;
     }
 
-    if (tk.type == TOK_STRING || tk.type == TOK_FSTRING)
+    if (tk.type == TOK_STRING || tk.type == TOK_FSTRING || tk.type == TOK_RAW_STRING)
     {
         Lexer lookahead = *l;
         lexer_next(&lookahead);
@@ -2746,33 +2747,13 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
         if (next_type == TOK_SEMICOLON || next_type == TOK_DOTDOT || next_type == TOK_RBRACE)
         {
             Token t = lexer_next(l); // consume string
-
-            char *inner = xmalloc(t.len);
-            // Strip quotes
-            if (t.type == TOK_FSTRING)
-            {
-                int is_multi =
-                    (t.len >= 7 && t.start[1] == '"' && t.start[2] == '"' && t.start[3] == '"');
-                int start_offset = is_multi ? 4 : 2;
-                int end_offset = is_multi ? 3 : 1;
-                strncpy(inner, t.start + start_offset, t.len - start_offset - end_offset);
-                inner[t.len - start_offset - end_offset] = 0;
-            }
-            else
-            {
-                int is_multi =
-                    (t.len >= 6 && t.start[0] == '"' && t.start[1] == '"' && t.start[2] == '"');
-                int start_offset = is_multi ? 3 : 1;
-                int end_offset = is_multi ? 3 : 1;
-                strncpy(inner, t.start + start_offset, t.len - start_offset - end_offset);
-                inner[t.len - start_offset - end_offset] = 0;
-            }
+            char *inner = token_get_string_content(t);
 
             int is_ln = (next_type == TOK_SEMICOLON || next_type == TOK_RBRACE);
             char **used_syms = NULL;
             int used_count = 0;
-            char *code =
-                process_printf_sugar(ctx, next, inner, is_ln, "stdout", &used_syms, &used_count, 1);
+            char *code = process_printf_sugar(ctx, next, inner, is_ln, "stdout", &used_syms,
+                                              &used_count, 1, (t.type == TOK_RAW_STRING));
 
             if (next_type == TOK_SEMICOLON)
             {
@@ -3376,35 +3357,16 @@ ASTNode *parse_statement(ParserContext *ctx, Lexer *l)
             lexer_next(l); // eat keyword
 
             Token t = lexer_next(l);
-            if (t.type != TOK_STRING && t.type != TOK_FSTRING)
+            if (t.type != TOK_STRING && t.type != TOK_FSTRING && t.type != TOK_RAW_STRING)
             {
                 zpanic_at(t, "Expected string literal after print/eprint");
             }
 
-            char *inner = xmalloc(t.len);
-            if (t.type == TOK_FSTRING)
-            {
-                int is_multi =
-                    (t.len >= 7 && t.start[1] == '"' && t.start[2] == '"' && t.start[3] == '"');
-                int start_offset = is_multi ? 4 : 2;
-                int end_offset = is_multi ? 3 : 1;
-                strncpy(inner, t.start + start_offset, t.len - start_offset - end_offset);
-                inner[t.len - start_offset - end_offset] = 0;
-            }
-            else
-            {
-                int is_multi =
-                    (t.len >= 6 && t.start[0] == '"' && t.start[1] == '"' && t.start[2] == '"');
-                int start_offset = is_multi ? 3 : 1;
-                int end_offset = is_multi ? 3 : 1;
-                strncpy(inner, t.start + start_offset, t.len - start_offset - end_offset);
-                inner[t.len - start_offset - end_offset] = 0;
-            }
-
+            char *inner = token_get_string_content(t);
             char **used_syms = NULL;
             int used_count = 0;
-            char *code =
-                process_printf_sugar(ctx, t, inner, is_ln, target, &used_syms, &used_count, 1);
+            char *code = process_printf_sugar(ctx, t, inner, is_ln, target, &used_syms, &used_count,
+                                              1, (t.type == TOK_RAW_STRING));
             free(inner);
 
             if (lexer_peek(l).type == TOK_SEMICOLON)
@@ -4053,10 +4015,7 @@ ASTNode *parse_include(ParserContext *ctx, Lexer *l)
     {
         // Local include: include "file.h"
         is_system = 0;
-        int len = t.len - 2;
-        path = xmalloc(len + 1);
-        strncpy(path, t.start + 1, len);
-        path[len] = 0;
+        path = token_get_string_content(t);
     }
 
     ASTNode *n = ast_create(NODE_INCLUDE);
@@ -4088,10 +4047,7 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
         }
 
         // Extract plugin name (strip quotes)
-        int name_len = plugin_tok.len - 2;
-        char *plugin_name = xmalloc(name_len + 1);
-        strncpy(plugin_name, plugin_tok.start + 1, name_len);
-        plugin_name[name_len] = '\0';
+        char *plugin_name = token_get_string_content(plugin_tok);
 
         if (plugin_name[0] == '.' &&
             (plugin_name[1] == '/' || (plugin_name[1] == '.' && plugin_name[2] == '/')))
@@ -4204,17 +4160,14 @@ ASTNode *parse_import(ParserContext *ctx, Lexer *l)
 
     // Parse filename
     Token t = lexer_next(l);
-    if (t.type != TOK_STRING)
+    if (t.type != TOK_STRING && t.type != TOK_RAW_STRING)
     {
         zpanic_at(t,
                   "Expected string (filename) after 'from' in selective import, got "
                   "type %d",
                   t.type);
     }
-    int ln = t.len - 2; // Remove quotes
-    char *fn = xmalloc(ln + 1);
-    strncpy(fn, t.start + 1, ln);
-    fn[ln] = 0;
+    char *fn = token_get_string_content(t);
 
     // Resolve paths
     char *resolved = z_resolve_path(fn, g_current_filename);

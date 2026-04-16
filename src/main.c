@@ -31,15 +31,26 @@ static void handle_crash(int sig)
 
 // Forward decl for LSP
 int lsp_main(int argc, char **argv);
-
 int main(int argc, char **argv)
 {
     signal(SIGSEGV, handle_crash);
     signal(SIGABRT, handle_crash);
     signal(SIGFPE, handle_crash);
 
-    int i;
+    int i, ef;
+    size_t k;
     const char *optimization_level = NULL;
+    char *env_root;
+    char *input_file_copy;
+    double start_time;
+    char *primary_real;
+    char temp_source_buf[MAX_PATH_LEN];
+    const char *ext_p;
+    FILE *out_f;
+    ArgList compile_args;
+    char self_path[MAX_PATH_SIZE];
+    char *outfile;
+
     z_setup_terminal();
     memset(&g_config, 0, sizeof(g_config));
     g_config.mode_debug = 1;
@@ -61,7 +72,6 @@ int main(int argc, char **argv)
     set_diag_by_name("conversion", 1);
     set_diag_by_name("style", 1);
 
-    char self_path[MAX_PATH_SIZE];
     z_get_executable_path(self_path, sizeof(self_path));
 
     if (self_path[0])
@@ -73,7 +83,7 @@ int main(int argc, char **argv)
         g_config.root_path = NULL;
     }
 
-    char *env_root = getenv("ZC_ROOT");
+    env_root = getenv("ZC_ROOT");
     if (env_root && env_root[0])
     {
         g_config.root_path = xstrdup(env_root);
@@ -479,7 +489,7 @@ int main(int argc, char **argv)
     }
 
     // Compute input directory
-    char *input_file_copy = xstrdup(g_config.input_file);
+    input_file_copy = xstrdup(g_config.input_file);
     char *last_slash = z_path_last_sep(input_file_copy);
     if (last_slash)
     {
@@ -553,7 +563,7 @@ int main(int argc, char **argv)
     }
     g_parser_ctx = &ctx;
 
-    double start_time = z_get_monotonic_time();
+    start_time = z_get_monotonic_time();
 
     if (!g_config.quiet)
     {
@@ -573,14 +583,14 @@ int main(int argc, char **argv)
     if (g_config.extra_file_count > 0)
     {
         // Mark primary file as imported to prevent re-parsing
-        char *primary_real = realpath(g_config.input_file, NULL);
+        primary_real = realpath(g_config.input_file, NULL);
         if (primary_real)
         {
             mark_file_imported(&ctx, primary_real);
             free(primary_real);
         }
 
-        for (int ef = 0; ef < g_config.extra_file_count; ef++)
+        for (ef = 0; ef < g_config.extra_file_count; ef++)
         {
             const char *extra_path = g_config.extra_files[ef];
             char *real_path = realpath(extra_path, NULL);
@@ -716,19 +726,18 @@ int main(int argc, char **argv)
     }
 
     // Determine temporary filename based on mode
-    char temp_source_buf[MAX_PATH_LEN];
-    const char *ext = ".c";
+    ext_p = ".c";
     if (g_config.use_cuda)
     {
-        ext = ".cu";
+        ext_p = ".cu";
     }
     else if (g_config.use_cpp)
     {
-        ext = ".cpp";
+        ext_p = ".cpp";
     }
     else if (g_config.use_objc)
     {
-        ext = ".m";
+        ext_p = ".m";
     }
 
     if (!g_config.output_file && g_config.input_file)
@@ -741,8 +750,8 @@ int main(int argc, char **argv)
         {
             if (g_config.mode_transpile)
             {
-                char *with_ext = xmalloc(strlen(stripped) + strlen(ext) + 1);
-                sprintf(with_ext, "%s%s", stripped, ext);
+                char *with_ext = xmalloc(strlen(stripped) + strlen(ext_p) + 1);
+                sprintf(with_ext, "%s%s", stripped, ext_p);
                 g_config.output_file = with_ext;
                 free(stripped);
             }
@@ -760,22 +769,22 @@ int main(int argc, char **argv)
     if (g_config.output_file)
     {
         size_t out_len = strlen(g_config.output_file);
-        size_t ext_len = strlen(ext);
-        if (out_len >= ext_len && strcmp(g_config.output_file + out_len - ext_len, ext) == 0)
+        size_t ext_len = strlen(ext_p);
+        if (out_len >= ext_len && strcmp(g_config.output_file + out_len - ext_len, ext_p) == 0)
         {
             // Already has extension, but we need a unique temp file to avoid clobbering
             // the output file before codegen is successfully completed.
             snprintf(temp_source_buf, sizeof(temp_source_buf), "%s.tmp%s", g_config.output_file,
-                     ext);
+                     ext_p);
         }
         else
         {
-            snprintf(temp_source_buf, sizeof(temp_source_buf), "%s%s", g_config.output_file, ext);
+            snprintf(temp_source_buf, sizeof(temp_source_buf), "%s%s", g_config.output_file, ext_p);
         }
     }
     else
     {
-        snprintf(temp_source_buf, sizeof(temp_source_buf), "out%s", ext);
+        snprintf(temp_source_buf, sizeof(temp_source_buf), "out%s", ext_p);
     }
     const char *temp_source_file = temp_source_buf;
 
@@ -785,15 +794,15 @@ int main(int argc, char **argv)
         printf(COLOR_BOLD COLOR_GREEN " Transpiling" COLOR_RESET " %s\n", g_config.input_file);
         fflush(stdout);
     }
-    FILE *out = fopen(temp_source_file, "w");
-    if (!out)
+    out_f = fopen(temp_source_file, "w");
+    if (!out_f)
     {
         perror("fopen temp output");
         return 1;
     }
 
-    codegen_node(&ctx, root, out);
-    fclose(out);
+    codegen_node(&ctx, root, out_f);
+    fclose(out_f);
 
     if (g_config.mode_transpile && g_config.output_file)
     {
@@ -832,15 +841,13 @@ int main(int argc, char **argv)
     }
 
     // Compile C
-    char *outfile =
-        g_config.output_file ? g_config.output_file : (z_is_windows() ? "a.exe" : "a.out");
+    outfile = g_config.output_file ? g_config.output_file : (z_is_windows() ? "a.exe" : "a.out");
 
     if (g_config.mode_debug)
     {
         append_flag(g_config.gcc_flags, sizeof(g_config.gcc_flags), "-g", NULL);
     }
 
-    ArgList compile_args;
     arg_list_init(&compile_args);
 
     // Build command
@@ -849,9 +856,9 @@ int main(int argc, char **argv)
     if (g_config.verbose)
     {
         printf(COLOR_BOLD COLOR_BLUE "     Command" COLOR_RESET);
-        for (size_t i = 0; i < compile_args.count; i++)
+        for (k = 0; k < compile_args.count; k++)
         {
-            printf(" %s", compile_args.args[i]);
+            printf(" %s", compile_args.args[k]);
         }
         printf("\n");
     }

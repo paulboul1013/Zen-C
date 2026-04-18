@@ -829,39 +829,55 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
         }
     }
 
-    // Return type
-    char *ret_str;
-    if (func->func.ret_type_info)
-    {
-        ret_str = type_to_c_string(func->func.ret_type_info);
-    }
-    else if (func->func.ret_type)
-    {
-        ret_str = xstrdup(func->func.ret_type);
-    }
-    else
-    {
-        ret_str = xstrdup("void");
-    }
-
     char *ret_suffix = NULL;
-    char *fn_ptr = strstr(ret_str, "(*)");
 
-    char *final_name = (func->link_name)
-                           ? func->link_name
-                           : (name_override ? (char *)name_override : func->func.name);
-
-    if (fn_ptr)
+    // Return type
+    if (func->func.is_async)
     {
-        int prefix_len = fn_ptr - ret_str + 2; // Include "(*"
-        fprintf(out, "%.*s%s(", prefix_len, ret_str, final_name);
-        ret_suffix = fn_ptr + 2;
+        fprintf(out, "Async ");
     }
     else
     {
-        fprintf(out, "%s %s(", ret_str, final_name);
+        char *ret_str;
+        if (func->func.ret_type_info)
+        {
+            ret_str = type_to_c_string(func->func.ret_type_info);
+        }
+        else if (func->func.ret_type)
+        {
+            ret_str = xstrdup(func->func.ret_type);
+        }
+        else
+        {
+            ret_str = xstrdup("void");
+        }
+
+        char *fn_ptr = strstr(ret_str, "(*)");
+
+        char *final_name = (func->link_name)
+                               ? func->link_name
+                               : (name_override ? (char *)name_override : func->func.name);
+
+        if (fn_ptr)
+        {
+            int prefix_len = fn_ptr - ret_str + 2; // Include "(*"
+            fprintf(out, "%.*s%s(", prefix_len, ret_str, final_name);
+            ret_suffix = xstrdup(fn_ptr + 2);
+        }
+        else
+        {
+            fprintf(out, "%s %s(", ret_str, final_name);
+        }
+        free(ret_str);
     }
-    free(ret_str);
+
+    if (func->func.is_async)
+    {
+        char *final_name = (func->link_name)
+                               ? func->link_name
+                               : (name_override ? (char *)name_override : func->func.name);
+        fprintf(out, "%s(", final_name);
+    }
 
     // Args
     if (func->func.arg_count == 0 && !func->func.is_varargs)
@@ -917,6 +933,7 @@ void emit_func_signature(ParserContext *ctx, FILE *out, ASTNode *func, const cha
     if (ret_suffix)
     {
         fprintf(out, "%s", ret_suffix);
+        free(ret_suffix);
     }
 }
 

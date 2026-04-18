@@ -162,12 +162,12 @@ ASTNode *transform_to_trait_object(ParserContext *ctx, const char *target_trait,
 
             if (source_expr->type == NODE_EXPR_UNARY && strcmp(source_expr->unary.op, "&") == 0)
             {
-                snprintf(code, 512, "(%s){.self=&%s, .vtable=&%s}", clean_trait, var_ref_name,
-                         v_mangled);
+                snprintf(code, 512, "(%s){.self=(void*)&%s, .vtable=&%s}", clean_trait,
+                         var_ref_name, v_mangled);
             }
             else
             {
-                snprintf(code, 512, "(%s){.self=%s, .vtable=&%s}", clean_trait, var_ref_name,
+                snprintf(code, 512, "(%s){.self=(void*)%s, .vtable=&%s}", clean_trait, var_ref_name,
                          v_mangled);
             }
 

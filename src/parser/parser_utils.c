@@ -5078,10 +5078,17 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                 }
             }
 
+            int is_const_param = 0;
             Token param_tok = lexer_next(l);
+
+            if (is_token(param_tok, "const"))
+            {
+                is_const_param = 1;
+                param_tok = lexer_next(l);
+            }
+
             // Handle 'self'
-            if (param_tok.type == TOK_IDENT && strncmp(param_tok.start, "self", 4) == 0 &&
-                param_tok.len == 4)
+            if (is_token(param_tok, "self"))
             {
                 names[count] = xstrdup("self");
                 if (ctx->current_impl_struct)
@@ -5098,6 +5105,7 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                         { // Fallback if get_primitive_type_kind failed for some reason
                             bt->name = xstrdup(ctx->current_impl_struct);
                         }
+                        bt->is_const = is_const_param;
                         Type *ptr = type_new_ptr(bt);
 
                         add_symbol(ctx, "self", buf_type, ptr);
@@ -5108,19 +5116,36 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                         // Structs: self is a pointer in signature and body
                         Type *st = type_new(TYPE_STRUCT);
                         st->name = xstrdup(ctx->current_impl_struct);
+                        st->is_const = is_const_param;
                         Type *ptr = type_new_ptr(st);
 
                         add_symbol(ctx, "self", buf_type, ptr);
                         types[count] = ptr;
                     }
                     free(buf_type);
-                    strcat(buf, "void* self");
+                    if (is_const_param)
+                    {
+                        strcat(buf, "const void* self");
+                    }
+                    else
+                    {
+                        strcat(buf, "void* self");
+                    }
                 }
                 else
                 {
-                    strcat(buf, "void* self");
-                    types[count] = type_new_ptr(type_new(TYPE_VOID));
-                    add_symbol(ctx, "self", "void*", types[count]);
+                    if (is_const_param)
+                    {
+                        strcat(buf, "const void* self");
+                    }
+                    else
+                    {
+                        strcat(buf, "void* self");
+                    }
+                    Type *void_type = type_new(TYPE_VOID);
+                    void_type->is_const = is_const_param;
+                    types[count] = type_new_ptr(void_type);
+                    add_symbol(ctx, "self", is_const_param ? "const void*" : "void*", types[count]);
                 }
                 ctype_overrides[count] = ctype_override;
                 count++;
@@ -5140,6 +5165,10 @@ char *parse_and_convert_args(ParserContext *ctx, Lexer *l, char ***defaults_out,
                 }
 
                 Type *arg_type = parse_type_formal(ctx, l);
+                if (is_const_param)
+                {
+                    arg_type->is_const = 1;
+                }
                 char *type_str = type_to_string(arg_type);
 
                 add_symbol(ctx, name, type_str, arg_type);

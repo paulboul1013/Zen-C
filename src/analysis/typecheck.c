@@ -1443,6 +1443,16 @@ static int check_type_compatibility(TypeChecker *tc, Type *target, Type *value, 
         return 1;
     }
 
+    // Trait object compatibility: Struct -> Trait
+    if (resolved_target->name && is_trait(resolved_target->name) &&
+        resolved_value->kind == TYPE_STRUCT && resolved_value->name)
+    {
+        if (check_impl(tc->pctx, resolved_target->name, resolved_value->name))
+        {
+            return 1;
+        }
+    }
+
     // Type mismatch - report error
     char *t_str = type_to_string(target);
     char *v_str = type_to_string(value);
@@ -1706,7 +1716,8 @@ static void check_function(TypeChecker *tc, ASTNode *node, int depth)
                     if (psym->type_info && psym->type_info->kind == TYPE_POINTER)
                     {
                         Type *inner = resolve_alias(psym->type_info->inner);
-                        if (inner && !inner->is_const && !psym->is_written_to)
+                        if (inner && !inner->is_const && !psym->type_info->is_const &&
+                            !psym->is_written_to)
                         {
                             misra_check_const_ptr_param(tc, psym->name, psym->decl_token);
                         }

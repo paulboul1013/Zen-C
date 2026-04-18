@@ -973,8 +973,10 @@ void emit_trait_defs(ASTNode *node, FILE *out)
                 if (m->func.args && strlen(m->func.args) > 0)
                 {
                     char *args_safe = replace_type_str(m->func.args, "Self", "void*", NULL, NULL);
-                    // Filter out "void* self" if it's already there to avoid duplication
-                    if (strstr(args_safe, "void* self") == args_safe)
+                    // Filter out "void* self" or "const void* self" if it's already there to avoid
+                    // duplication
+                    if (strstr(args_safe, "void* self") == args_safe ||
+                        strstr(args_safe, "const void* self") == args_safe)
                     {
                         fprintf(out, "%s", args_safe);
                     }
@@ -1022,13 +1024,15 @@ void emit_trait_wrappers(ASTNode *node, FILE *out)
             {
                 char *ret_sub = substitute_proto_self(m->func.ret_type, node->trait.name);
                 const char *orig = parse_original_method_name(m->func.name);
-                fprintf(out, "%s %s__%s(%s* self", ret_sub, node->trait.name, orig,
-                        node->trait.name);
+                int is_const_self = (m->func.arg_count > 0 && m->func.arg_types &&
+                                     m->func.arg_types[0] && m->func.arg_types[0]->is_const);
+                fprintf(out, "%s %s__%s(%s%s* self", ret_sub, node->trait.name, orig,
+                        is_const_self ? "const " : "", node->trait.name);
 
                 if (m->func.args && strlen(m->func.args) > 0)
                 {
                     char *sa = replace_type_str(m->func.args, "Self", node->trait.name, NULL, NULL);
-                    if (strstr(sa, "void* self") == sa)
+                    if (strstr(sa, "void* self") == sa || strstr(sa, "const void* self") == sa)
                     {
                         char *comma = strchr(sa, ',');
                         if (comma)
@@ -1311,16 +1315,8 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                     sprintf(proto, "%s__%s", effective_name, fname);
                 }
 
-                if (m->func.is_async)
-                {
-                    const char *final_name = (m->link_name) ? m->link_name : proto;
-                    fprintf(out, "Async %s(%s);\n", final_name, m->func.args);
-                }
-                else
-                {
-                    emit_func_signature(ctx, out, m, proto);
-                    fprintf(out, ";\n");
-                }
+                emit_func_signature(ctx, out, m, proto);
+                fprintf(out, ";\n");
                 if (m->cfg_condition)
                 {
                     fprintf(out, "#endif\n");
@@ -1393,14 +1389,8 @@ void emit_protos(ParserContext *ctx, ASTNode *node, FILE *out)
                 {
                     fprintf(out, "#if %s\n", m->cfg_condition);
                 }
-                if (m->func.is_async)
-                {
-                    fprintf(out, "Async %s(%s);\n", m->func.name, m->func.args);
-                }
-                else
-                {
-                    fprintf(out, "%s %s(%s);\n", m->func.ret_type, m->func.name, m->func.args);
-                }
+                emit_func_signature(ctx, out, m, NULL);
+                fprintf(out, ";\n");
                 if (m->cfg_condition)
                 {
                     fprintf(out, "#endif\n");

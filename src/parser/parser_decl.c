@@ -276,10 +276,14 @@ char *patch_self_args(const char *args, const char *struct_name)
     }
     safe_name[j] = 0;
 
-    char *new_args = xmalloc(strlen(args) + strlen(safe_name) + 10);
+    char *new_args = xmalloc(strlen(args) + strlen(safe_name) + 20);
 
-    // Check if it starts with "void* self"
-    if (strncmp(args, "void* self", 10) == 0)
+    // Check if it starts with "const void* self" or "void* self"
+    if (strncmp(args, "const void* self", 16) == 0)
+    {
+        sprintf(new_args, "const %s* self%s", safe_name, args + 16);
+    }
+    else if (strncmp(args, "void* self", 10) == 0)
     {
         sprintf(new_args, "%s* self%s", safe_name, args + 10);
     }

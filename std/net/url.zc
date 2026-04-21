@@ -2,6 +2,7 @@
 import "../core.zc"
 import "../string.zc"
 import "../result.zc"
+import "../mem.zc"
 
 struct Url {
     scheme: String;
@@ -48,12 +49,12 @@ impl Url {
         }
         
         // Extract host/port part
-        let host_port_buf = (char*)malloc(host_len + 1);
+        let host_port_buf = alloc_n<char>(host_len + 1);
         strncpy(host_port_buf, rest, host_len);
         host_port_buf[host_len] = 0;
         
         let host_str = String::new(host_port_buf); // Temporary
-        free(host_port_buf);
+        dealloc<char>(host_port_buf);
         
         // Check for Port
         let port = default_port;

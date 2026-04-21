@@ -16,7 +16,7 @@ impl Queue<T> {
 
   fn free(self) {
     if (self.data) {
-      free(self.data);
+      dealloc<T>(self.data);
       self.data = NULL;
     }
     self.cap = 0;
@@ -27,7 +27,7 @@ impl Queue<T> {
 
   fn _grow(self) {
     let new_cap = (self.cap == 0) ? 8 : self.cap * 2;
-    let new_data: T* = malloc(sizeof(T) * new_cap);
+    let new_data: T* = alloc_n<T>(new_cap);
     
     if (self.count > 0) {
         if (self.tail > self.head) {
@@ -40,7 +40,7 @@ impl Queue<T> {
         }
     }
     
-    if (self.data) free(self.data);
+    if (self.data) dealloc<T>(self.data);
     self.data = new_data;
     self.cap = new_cap;
     self.head = 0;
@@ -49,7 +49,7 @@ impl Queue<T> {
 
   fn clone(self) -> Queue<T> {
     let new_queue = Queue<T>::new();
-    new_queue.data = malloc(sizeof(T) * self.cap);
+    new_queue.data = alloc_n<T>(self.cap);
     new_queue.cap = self.cap;
     new_queue.head = 0;
     new_queue.tail = self.count;

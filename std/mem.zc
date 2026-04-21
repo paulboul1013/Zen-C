@@ -1,15 +1,92 @@
+import "./arena.zc"
+
+// --- Non-generic internal helpers for conditional compilation ---
+// These avoid the 'StringPtr' mangling bug in generic functions with @cfg attributes.
+
+@cfg(misra)
+fn _z_internal_alloc_bytes(size: usize) -> void* {
+    return _z_get_std_arena().alloc_bytes(size);
+}
+
+@cfg(not(misra))
+fn _z_internal_alloc_bytes(size: usize) -> void* {
+    return malloc(size);
+}
+
+@cfg(misra)
+fn _z_internal_zalloc_bytes(size: usize) -> void* {
+    let ptr = _z_get_std_arena().alloc_bytes(size);
+    if (ptr != NULL) {
+        memset(ptr, 0, size);
+    }
+    return ptr;
+}
+
+@cfg(not(misra))
+fn _z_internal_zalloc_bytes(size: usize) -> void* {
+    return calloc(1, size);
+}
+
+@cfg(misra)
+fn _z_internal_realloc_bytes(ptr: void*, old_size: usize, new_size: usize) -> void* {
+    // In StaticArena, realloc needs the original type/count, but we can approximate
+    // if we treat it as an array of bytes.
+    return _z_get_std_arena().realloc<byte>((byte*)ptr, old_size, new_size);
+}
+
+@cfg(not(misra))
+fn _z_internal_realloc_bytes(ptr: void*, old_size: usize, new_size: usize) -> void* {
+    (void)old_size;
+    return realloc(ptr, new_size);
+}
+
+@cfg(misra)
+fn _z_internal_free(ptr: void*) {
+    (void)ptr;
+    // No-op in MISRA arena mode
+}
+
+@cfg(not(misra))
+fn _z_internal_free(ptr: void*) {
+    if (ptr != NULL) {
+        free(ptr);
+    }
+}
+
+// --- Public Generic API ---
+// These are NOT attribute-guarded to avoid compiler template bugs.
 
 fn alloc<T>() -> T* {
-    return (T*)malloc(sizeof(T));
+    return (T*)_z_internal_alloc_bytes(sizeof(T));
 }
 
 fn zalloc<T>() -> T* {
-    return (T*)calloc(1, sizeof(T));
+    return (T*)_z_internal_zalloc_bytes(sizeof(T));
 }
 
 fn alloc_n<T>(n: usize) -> T* {
-    return (T*)malloc(sizeof(T) * n);
+    return (T*)_z_internal_alloc_bytes(sizeof(T) * n);
 }
+
+fn realloc_n<T>(ptr: T*, old_n: usize, new_n: usize) -> T* {
+    return (T*)_z_internal_realloc_bytes((void*)ptr, sizeof(T) * old_n, sizeof(T) * new_n);
+}
+
+fn dealloc<T>(ptr: T*) {
+    _z_internal_free((void*)ptr);
+}
+
+// --- Raw Byte API for C Interop ---
+
+fn alloc_bytes(size: usize) -> void* {
+    return _z_internal_alloc_bytes(size);
+}
+
+fn zalloc_bytes(size: usize) -> void* {
+    return _z_internal_zalloc_bytes(size);
+}
+
+// --- Box and Traits ---
 
 trait Drop {
     fn drop(self);
@@ -27,7 +104,7 @@ struct Box<T> {
 
 impl Box<T> {
     fn new() -> Self {
-        return Self { ptr: calloc(1, sizeof(T)) };
+        return Self { ptr: alloc<T>() };
     }
     
     fn from_ptr(p: T*) -> Self {
@@ -44,7 +121,7 @@ impl Box<T> {
     
     fn free(self) {
         if self.ptr != NULL {
-            free(self.ptr);
+            dealloc<T>(self.ptr);
             self.ptr = NULL;
         }
     }

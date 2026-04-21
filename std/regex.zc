@@ -9,6 +9,7 @@ import "./core.zc"
 import "./string.zc"
 import "./vec.zc"
 import "./option.zc"
+import "./mem.zc"
 
 struct Match {
     text: char*;
@@ -27,7 +28,7 @@ impl Match {
     }
 
     fn as_string(self) -> char* {
-        let s: char* = malloc(self.len + 1);
+        let s: char* = alloc_n<char>(self.len + 1);
         memcpy(s, self.text + self.start, self.len);
         s[self.len] = 0;
         return s;
@@ -50,10 +51,10 @@ impl Regex {
     }
 
     fn compile_with_flags(pattern: char*, flags: int) -> Regex {
-        let preg = malloc(1024);
+        let preg = alloc_bytes(1024);
         let status = tre_regcomp(preg, pattern, flags);
         if (status != 0) {
-            free(preg);
+            dealloc<void>(preg);
             return Regex { preg: NULL, pattern: NULL, flags: flags };
         }
         return Regex { preg: preg, pattern: pattern, flags: flags };
@@ -174,7 +175,7 @@ impl Regex {
     fn destroy(self) {
         if (self.preg != NULL) {
             tre_regfree(self.preg);
-            free(self.preg);
+            dealloc<void>(self.preg);
         }
     }
 }

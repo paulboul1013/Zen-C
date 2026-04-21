@@ -232,10 +232,20 @@ int main(int argc, char **argv)
         {
             g_config.misra_mode = 1;
             g_config.use_typecheck = 1;
+            if (g_config.cfg_define_count < 64)
+            {
+                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("misra");
+                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("ZC_MISRA");
+            }
         }
         else if (strcmp(arg, "--freestanding") == 0)
         {
             g_config.is_freestanding = 1;
+            if (g_config.cfg_define_count < 64)
+            {
+                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("freestanding");
+                g_config.cfg_defines[g_config.cfg_define_count++] = xstrdup("ZC_FREESTANDING");
+            }
         }
         else if (strcmp(arg, "--warn-errors") == 0)
         {

@@ -37,7 +37,9 @@ struct StringCharsIter {
 
 impl StringCharsIter {
     fn next(self) -> Option<rune> {
-        if (self.pos >= self.len) return Option<rune>::None();
+        if (self.pos >= self.len) {
+            return Option<rune>::None();
+        }
         
         let c = (byte)self.data[self.pos];
         let seq = String::_utf8_seq_len((char)c);
@@ -301,7 +303,7 @@ impl String {
             }
             if is_match {
                 indices.push(i);
-                // Optional: i = i + t_len - 1; // Un-comment to avoid overlapping matches
+                // Optional: i = i + t_len - 1; (Un-comment to avoid overlapping matches)
             }
         }
         return indices;
@@ -489,10 +491,10 @@ impl String {
             let seq = String::_utf8_seq_len((char)c);
             
             if (count == idx) {
-                if (seq == 1) return (rune)c;
-                if (seq == 2) return (rune)(((int)(c & 0x1F) << 6) | ((int)(byte)self.vec.get(i + 1) & 0x3F));
-                if (seq == 3) return (rune)(((int)(c & 0x0F) << 12) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 2) & 0x3F));
-                if (seq == 4) return (rune)(((int)(c & 0x07) << 18) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 12) | (((int)(byte)self.vec.get(i + 2) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 3) & 0x3F));
+                if (seq == 1) { return (rune)c; }
+                if (seq == 2) { return (rune)(((int)(c & 0x1F) << 6) | ((int)(byte)self.vec.get(i + 1) & 0x3F)); }
+                if (seq == 3) { return (rune)(((int)(c & 0x0F) << 12) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 2) & 0x3F)); }
+                if (seq == 4) { return (rune)(((int)(c & 0x07) << 18) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 12) | (((int)(byte)self.vec.get(i + 2) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 3) & 0x3F)); }
             }
             
             i = i + seq;
@@ -580,15 +582,17 @@ impl String {
             count = count + 1;
         }
         
-        if (i >= len) return (rune)0;
+        if (i >= len) {
+            return (rune)0;
+        }
         
         let c = (byte)self.vec.get(i);
         let seq = String::_utf8_seq_len((char)c);
         let val: rune = 0;
-        if (seq == 1) val = (rune)c;
-        else if (seq == 2) val = (rune)(((int)(c & 0x1F) << 6) | ((int)(byte)self.vec.get(i + 1) & 0x3F));
-        else if (seq == 3) val = (rune)(((int)(c & 0x0F) << 12) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 2) & 0x3F));
-        else if (seq == 4) val = (rune)(((int)(c & 0x07) << 18) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 12) | (((int)(byte)self.vec.get(i + 2) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 3) & 0x3F));
+        if (seq == 1) { val = (rune)c; }
+        else if (seq == 2) { val = (rune)(((int)(c & 0x1F) << 6) | ((int)(byte)self.vec.get(i + 1) & 0x3F)); }
+        else if (seq == 3) { val = (rune)(((int)(c & 0x0F) << 12) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 2) & 0x3F)); }
+        else if (seq == 4) { val = (rune)(((int)(c & 0x07) << 18) | (((int)(byte)self.vec.get(i + 1) & 0x3F) << 12) | (((int)(byte)self.vec.get(i + 2) & 0x3F) << 6) | ((int)(byte)self.vec.get(i + 3) & 0x3F)); }
 
         for (let j: usize = 0; j < seq; j = j + 1) {
             self.vec.remove(i);
@@ -695,7 +699,9 @@ impl String {
     
     fn replace(self, target: char*, replacement: char*) -> String {
         let t_len = strlen(target);
-        if (t_len == 0) return self.substring(0, self.length()); // clone
+        if (t_len == 0) {
+            return self.substring(0, self.length()); // clone
+        }
         
 
         let s_len = self.length();

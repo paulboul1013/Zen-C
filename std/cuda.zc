@@ -168,7 +168,7 @@ fn cuda_device_properties(device_id: int) -> CudaDeviceProp {
     _z_cuda_get_props(device_id, name_ptr, &mem, &sm, &maj, &min, &max_t, &warp);
     
     let s = String::new(name_ptr);
-    free(name_ptr);
+    dealloc<char>(name_ptr);
     
     return CudaDeviceProp {
         name: s,

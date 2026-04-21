@@ -51,6 +51,7 @@ typedef struct ZenSymbol
     int is_moved;        ///< 1 if ownership transferred.
     int is_local;        ///< 1 if this is a local variable/symbol.
     int is_written_to;   ///< 1 if the value (or dereferenced memory) was modified.
+    int is_dereferenced; ///< 1 if struct fields were explicitly accessed.
     char *cfg_condition; ///< Optional @cfg condition.
     char *link_name;     ///< Overriding C identifier.
 

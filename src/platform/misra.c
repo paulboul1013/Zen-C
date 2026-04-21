@@ -933,6 +933,16 @@ void misra_audit_unused_symbols(TypeChecker *tc)
                 break;
             }
         }
+        else if (sym->is_used && sym->kind == SYM_STRUCT && !sym->is_dereferenced &&
+                 sym->decl_token.line != 0)
+        {
+            if (sym->data.node && sym->data.node->type == NODE_STRUCT &&
+                !sym->data.node->strct.is_opaque)
+            {
+                tc_error(tc, sym->decl_token,
+                         "MISRA Dir 4.8: pointer to struct is never dereferenced (make it opaque)");
+            }
+        }
         sym = sym->next;
     }
 }

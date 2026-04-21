@@ -64,7 +64,7 @@ impl Command {
         
         let out = String::from("");
         let buf_size: usize = 1024;
-        let buf = (char*)malloc(buf_size);
+        let buf = alloc_n<char>(buf_size);
         
         while (true) {
             let fgets_res = fgets(buf, (c_int)buf_size, fp);
@@ -76,7 +76,7 @@ impl Command {
         }
         
         let code = _z_pclose(fp);
-        free(buf);
+        dealloc<char>(buf);
         cmd_str.free();
         
         return Output {

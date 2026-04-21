@@ -1,4 +1,5 @@
 import "./core.zc"
+import "./mem.zc"
 import "./result.zc"
 import "./string.zc"
 import "./vec.zc"
@@ -57,7 +58,7 @@ impl File {
         let size = ftell(self.handle);
         fseek(self.handle, 0, Z_SEEK_SET);
         
-        let buffer: char* = malloc((usize)size + 1);
+        let buffer: char* = alloc_n<char>((usize)size + 1);
         if (buffer == NULL) {
             return Result<String>::Err("Out of memory");
         }
@@ -66,7 +67,7 @@ impl File {
         buffer[read] = 0;
         
         let s = String::new(buffer);
-        free(buffer);
+        dealloc<char>(buffer);
         
         let res = Result<String>::Ok(s);
         s.forget();
@@ -218,7 +219,7 @@ impl File {
         }
         
         let entries = Vec<DirEntry>::new();
-        let name_buf: char* = malloc(256);
+        let name_buf: char* = alloc_n<char>(256);
         
         if (name_buf == NULL) {
             _z_fs_closedir(dir);
@@ -249,7 +250,7 @@ impl File {
             ent.name.forget();
         }
         
-        free(name_buf);
+        dealloc<char>(name_buf);
         _z_fs_closedir(dir);
         
         let res = Result< Vec<DirEntry> >::Ok(entries);
@@ -258,16 +259,16 @@ impl File {
     }
 
     fn current_dir() -> Result<String> {
-        let buf: char* = malloc(1024);
+        let buf: char* = alloc_n<char>(1024);
         if (buf == NULL) return Result<String>::Err("Out of memory");
         
         if (getcwd(buf, 1024) == NULL) {
-            free(buf);
+            dealloc<char>(buf);
             return Result<String>::Err("Failed to get current directory");
         }
         
         let s = String::new(buf);
-        free(buf);
+        dealloc<char>(buf);
         let res = Result<String>::Ok(s);
         s.forget();
         let ret = res;

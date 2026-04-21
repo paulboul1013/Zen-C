@@ -1,5 +1,6 @@
 
 import "./core.zc"
+import "./mem.zc"
 import "./string.zc"
 
 include <stdio.h>
@@ -30,7 +31,7 @@ fn format_into(buffer: char*, size: usize, fmt: char*, ...) -> c_int {
 }
 
 fn format_new(fmt: char*, ...) -> char* {
-    let buffer: char* = malloc(1024);
+    let buffer: char* = alloc_n<char>(1024);
     if buffer == NULL return NULL;
     
     let ap: va_list;
@@ -62,8 +63,10 @@ fn println(fmt: char*, ...) -> c_int {
 fn readln() -> char* {
     let cap: usize = 64;
     let len: usize = 0;
-    let line: char* = malloc(cap);
-    if (line == NULL) return NULL;
+    let line: char* = alloc_n<char>(cap);
+    if (line == NULL) {
+        return NULL;
+    }
     
     let c: c_int;
     let std_in = stdin;
@@ -72,15 +75,19 @@ fn readln() -> char* {
         c = fgetc(std_in);
         // Explicit cast to avoid -1 becoming UINT64_MAX in some contexts if treated as unsigned
         let eof_c: c_int = -1; 
-        if (c == eof_c) break;
+        if (c == eof_c) {
+            break;
+        }
         let nl_c: c_int = 10;
-        if (c == nl_c) break; // '\n'
+        if (c == nl_c) {
+             break; // '\n'
+        }
 
         if (len + 1 >= cap) {
             cap = cap * 2;
-            let n = realloc(line, cap);
+            let n = realloc_n<char>(line, cap / 2, cap);
             if (n == NULL) {
-                free(line);
+                dealloc<char>(line);
                 return NULL;
             }
             line = n;
@@ -92,7 +99,7 @@ fn readln() -> char* {
     
     let eof_final: int = -1;
     if (len == 0 && c == eof_final) {
-        free(line);
+        dealloc<char>(line);
         return NULL;
     }
     
@@ -112,11 +119,15 @@ fn _utf8_seq_len(first_byte: byte) -> usize {
 fn read_rune() -> rune {
     let std_in = stdin;
     let c1 = fgetc(std_in);
-    if (c1 == -1) return (rune)0;
+    if (c1 == -1) {
+        return (rune)0;
+    }
     
     let first = (byte)c1;
     let len = _utf8_seq_len(first);
-    if (len == 1) return (rune)first;
+    if (len == 1) {
+        return (rune)first;
+    }
     
     let val: uint32_t = 0;
     if (len == 2) {
@@ -145,8 +156,10 @@ fn itos(n: int) -> char* {
 
 // Heap-allocated integer to string - caller must free
 fn itos_new(n: int) -> char* {
-    let buffer: char* = malloc(32);
-    if (buffer == NULL) return NULL;
+    let buffer: char* = alloc_n<char>(32);
+    if (buffer == NULL) {
+        return NULL;
+    }
     sprintf(buffer, "%d", n);
     return buffer;
 }

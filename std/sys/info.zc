@@ -1,6 +1,7 @@
 
 import "../core.zc"
 import "../string.zc"
+import "../mem.zc"
 
 include <sys/utsname.h>
 include <string.h>
@@ -32,11 +33,11 @@ struct SysInfo {}
 
 impl SysInfo {
     fn get_uname() -> Uname {
-        let sys = (char*)malloc(256);
-        let node = (char*)malloc(256);
-        let rel = (char*)malloc(256);
-        let ver = (char*)malloc(256);
-        let mach = (char*)malloc(256);
+        let sys = alloc_n<char>(256);
+        let node = alloc_n<char>(256);
+        let rel = alloc_n<char>(256);
+        let ver = alloc_n<char>(256);
+        let mach = alloc_n<char>(256);
         
         if (_z_uname(sys, node, rel, ver, mach) != 0) {
             // Return empty info on failure
@@ -57,11 +58,11 @@ impl SysInfo {
             machine: String::from(mach)
         };
         
-        free(sys);
-        free(node);
-        free(rel);
-        free(ver);
-        free(mach);
+        dealloc<char>(sys);
+        dealloc<char>(node);
+        dealloc<char>(rel);
+        dealloc<char>(ver);
+        dealloc<char>(mach);
         
         return u;
     }

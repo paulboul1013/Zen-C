@@ -1,12 +1,14 @@
 import "./vec.zc"
 
+import "./mem.zc"
+
 struct BigInt {
     digits: Vec<u8>*
 }
 
 impl BigInt {
     fn new() -> Self {
-        let v_ptr: Vec<u8>* = malloc(sizeof(Vec<u8>));
+        let v_ptr: Vec<u8>* = alloc<Vec<u8>>();
         *v_ptr = Vec<u8>::new();
         return BigInt { digits: v_ptr };
     }
@@ -26,7 +28,7 @@ impl BigInt {
     }
     
     fn clone(self) -> Self {
-        let v_ptr: Vec<u8>* = malloc(sizeof(Vec<u8>));
+        let v_ptr: Vec<u8>* = alloc<Vec<u8>>();
         *v_ptr = self.digits.clone();
         return BigInt { digits: v_ptr };
     }
@@ -34,7 +36,7 @@ impl BigInt {
     fn free_mem(self) {
         if (usize)self.digits != 0 {
             self.digits.free();
-            free(self.digits);
+            dealloc<Vec<u8>>(self.digits);
         }
     }
     
@@ -76,9 +78,9 @@ impl BigInt {
     fn to_string(self) -> char* {
         let len = self.digits.len;
         if len == 0 {
-            return strdup("0");
+            return _z_misra_strdup("0");
         }
-        let buf: char* = malloc(len + 1);
+        let buf: char* = alloc_n<char>(len + 1);
         let idx: usize = 0;
         let i = len;
         while i > 0 {

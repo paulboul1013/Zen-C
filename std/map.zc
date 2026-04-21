@@ -19,6 +19,8 @@ fn _map_hash_str(str: const char*) -> usize {
     return hash;
 }
 
+import "./mem.zc"
+
 struct Map<V> {
     keys: char**;
     vals: V*;
@@ -97,10 +99,15 @@ impl Map<V> {
         let old_cap = self.cap;
 
         self.cap = new_cap;
-        self.keys = calloc(new_cap, sizeof(char*));
-        self.vals = calloc(new_cap, sizeof(V));
-        self.occupied = calloc(new_cap, sizeof(bool));
-        self.deleted = calloc(new_cap, sizeof(bool));
+        self.keys = alloc_n<char*>(new_cap);
+        self.vals = alloc_n<V>(new_cap);
+        self.occupied = alloc_n<bool>(new_cap);
+        self.deleted = alloc_n<bool>(new_cap);
+        // Manual zeroing as alloc_n doesn't zero in non-misra mode
+        memset(self.keys, 0, new_cap * sizeof(char*));
+        memset(self.vals, 0, new_cap * sizeof(V));
+        memset(self.occupied, 0, new_cap * sizeof(bool));
+        memset(self.deleted, 0, new_cap * sizeof(bool));
         self.len = 0;
 
         for (let i: usize = 0; i < old_cap; i = i + 1) {
@@ -110,16 +117,18 @@ impl Map<V> {
         }
         
         // Free old arrays (use explicit braces to avoid parser bug)
-        if (old_keys != NULL) { free(old_keys); }
-        if (old_vals != NULL) { free(old_vals); }
-        if (old_occupied != NULL) { free(old_occupied); }
-        if (old_deleted != NULL) { free(old_deleted); }
+        if (old_keys != NULL) { dealloc<char*>(old_keys); }
+        if (old_vals != NULL) { dealloc<V>(old_vals); }
+        if (old_occupied != NULL) { dealloc<bool>(old_occupied); }
+        if (old_deleted != NULL) { dealloc<bool>(old_deleted); }
     }
 
     fn put(self, key: char*, val: V) {
         if (self.len >= self.cap * 0.75) {
             let new_cap = self.cap * 2;
-            if (new_cap < 8) new_cap = 8;
+            if (new_cap < 8) {
+                new_cap = 8;
+            }
             self._resize(new_cap);
         }
 
@@ -128,7 +137,9 @@ impl Map<V> {
 
         while (true) {
             if (!self.occupied[idx] || (self.occupied[idx] && !self.deleted[idx] && strcmp(self.keys[idx], key) == 0)) {
-                if (!self.occupied[idx]) self.len = self.len + 1;
+                if (!self.occupied[idx]) {
+                    self.len = self.len + 1;
+                }
                 
                 if (!self.occupied[idx] || self.deleted[idx]) {
                     self.keys[idx] = strdup(key);
@@ -176,18 +187,22 @@ impl Map<V> {
     }
     
     fn remove(self, key: char*) {
-        if (self.cap == 0) return;
+        if (self.cap == 0) {
+            return;
+        }
         
         let hash = _map_hash_str(key);
         let idx = hash % self.cap;
         
         while (true) {
-            if (!self.occupied[idx]) return;
+            if (!self.occupied[idx]) {
+                return;
+            }
             
             if (!self.deleted[idx] && strcmp(self.keys[idx], key) == 0) {
                  self.deleted[idx] = true;
                  self.len = self.len - 1;
-                 free(self.keys[idx]);
+                 dealloc<char>(self.keys[idx]);
                  return;
             }
             
@@ -207,13 +222,13 @@ impl Map<V> {
         if (self.keys) {
             for (let i: usize = 0; i < self.cap; i = i + 1) {
                 if (self.occupied[i] && !self.deleted[i]) {
-                    free(self.keys[i]);
+                    dealloc<char>(self.keys[i]);
                 }
             }
-            free(self.keys);
-            free(self.vals);
-            free(self.occupied);
-            free(self.deleted);
+            dealloc<char*>(self.keys);
+            dealloc<V>(self.vals);
+            dealloc<bool>(self.occupied);
+            dealloc<bool>(self.deleted);
         }
         self.keys = 0;
         self.vals = 0;
@@ -228,7 +243,9 @@ impl Map<V> {
     }
     
     fn is_slot_occupied(self, idx: usize) -> bool {
-        if (idx >= self.cap) return false;
+        if (idx >= self.cap) {
+            return false;
+        }
         return self.occupied[idx] && !self.deleted[idx];
     }
     

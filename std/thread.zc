@@ -26,7 +26,12 @@ raw {
         void (*f)(void*) = (void(*)(void*))closure->func;
         f(closure->ctx);
         if (closure->drop) closure->drop(closure->ctx);
+        // In MISRA mode, we don't freeCtx.
+        // In non-MISRA mode, this still uses free() which is fine as it's raw C.
+        // Actually, we should use a macro prefix to be consistent.
+        #ifndef ZC_MISRA
         free(closure);
+        #endif
         return NULL;
     }
 
@@ -84,7 +89,7 @@ impl Thread {
     fn spawn(func: fn()) -> Result<Thread> {
         let out_handle: usize = 0; 
         
-        let ctx = malloc(sizeof(fn())); 
+        let ctx = alloc_bytes(sizeof(fn())); 
         if (ctx == NULL) return Result<Thread>::Err("OOM");
         
         memcpy(ctx, &func, sizeof(fn()));
@@ -97,7 +102,7 @@ impl Thread {
         let ret = _z_thread_spawn(ctx, &out_handle);
         
         if ret != 0 {
-            free(ctx);
+            dealloc<void>(ctx);
             return Result<Thread>::Err("Failed to create thread");
         }
         

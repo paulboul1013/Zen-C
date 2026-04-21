@@ -2260,6 +2260,15 @@ static void check_struct_init(TypeChecker *tc, ASTNode *node, int depth)
 
     // MISRA: Mark struct type as used
     mark_type_as_used(tc, node->type_info);
+    if (g_config.misra_mode)
+    {
+        ZenSymbol *struct_sym =
+            symbol_lookup_kind(tc->pctx->global_scope, node->struct_init.struct_name, SYM_STRUCT);
+        if (struct_sym)
+        {
+            struct_sym->is_dereferenced = 1;
+        }
+    }
 
     // Find struct definition
     ASTNode *def = find_struct_def(tc->pctx, node->struct_init.struct_name);
@@ -3090,6 +3099,15 @@ static void check_node(TypeChecker *tc, ASTNode *node, int depth)
             Type *target_type = get_inner_type(node->member.target->type_info);
             if (target_type->kind == TYPE_STRUCT && target_type->name)
             {
+                if (g_config.misra_mode)
+                {
+                    ZenSymbol *struct_sym =
+                        symbol_lookup_kind(tc->pctx->global_scope, target_type->name, SYM_STRUCT);
+                    if (struct_sym)
+                    {
+                        struct_sym->is_dereferenced = 1;
+                    }
+                }
                 ASTNode *struct_def = find_struct_def(tc->pctx, target_type->name);
                 if (struct_def)
                 {

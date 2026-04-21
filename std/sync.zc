@@ -10,7 +10,7 @@ struct Mutex {
 
 impl Mutex {
     fn new() -> Mutex {
-        let ptr = malloc(64); 
+        let ptr = alloc_bytes(64); 
         pthread_mutex_init(ptr, NULL);
         return Mutex { handle: ptr };
     }
@@ -30,7 +30,7 @@ impl Mutex {
     fn free(self) {
         if (self.handle != NULL) {
             pthread_mutex_destroy(self.handle);
-            free(self.handle);
+            dealloc<void>(self.handle);
             self.handle = NULL;
         }
     }
@@ -42,7 +42,7 @@ struct CondVar {
 
 impl CondVar {
     fn new() -> CondVar {
-        let ptr = malloc(64); 
+        let ptr = alloc_bytes(64); 
         pthread_cond_init(ptr, NULL);
         return CondVar { handle: ptr };
     }
@@ -62,7 +62,7 @@ impl CondVar {
     fn free(self) {
         if (self.handle != NULL) {
             pthread_cond_destroy(self.handle);
-            free(self.handle);
+            dealloc<void>(self.handle);
             self.handle = NULL;
         }
     }
@@ -74,7 +74,7 @@ struct RwLock {
 
 impl RwLock {
     fn new() -> RwLock {
-        let ptr = malloc(64); 
+        let ptr = alloc_bytes(64); 
         pthread_rwlock_init(ptr, NULL);
         return RwLock { handle: ptr };
     }
@@ -102,7 +102,7 @@ impl RwLock {
     fn free(self) {
         if (self.handle != NULL) {
             pthread_rwlock_destroy(self.handle);
-            free(self.handle);
+            dealloc<void>(self.handle);
             self.handle = NULL;
         }
     }
@@ -168,7 +168,7 @@ struct BarrierData {
 impl Barrier {
     @cfg(apple)
     fn new(count: int) -> Barrier {
-        let data = (BarrierData*)malloc(sizeof(BarrierData));
+        let data = (BarrierData*)alloc_bytes(sizeof(BarrierData));
         data.mutex = Mutex::new();
         data.cond = CondVar::new();
         data.count = count;
@@ -179,7 +179,7 @@ impl Barrier {
 
     @cfg(not(apple))
     fn new(count: int) -> Barrier {
-        let ptr = malloc(64); 
+        let ptr = alloc_bytes(64); 
         pthread_barrier_init(ptr, NULL, count);
         return Barrier { handle: ptr };
     }
@@ -209,7 +209,10 @@ impl Barrier {
     @cfg(not(apple))
     fn wait(self) -> bool {
         let ret = pthread_barrier_wait(self.handle);
-        return ret == 0 || ret == -1; 
+        if (ret == 0 || ret == -1) {
+            return true;
+        }
+        return false;
     }
     
     @cfg(apple)
@@ -218,7 +221,7 @@ impl Barrier {
             let data = (BarrierData*)self.handle;
             data.mutex.free();
             data.cond.free();
-            free(data);
+            dealloc<BarrierData>(data);
             self.handle = NULL;
         }
     }
@@ -227,7 +230,7 @@ impl Barrier {
     fn free(self) {
         if (self.handle != NULL) {
             pthread_barrier_destroy(self.handle);
-            free(self.handle);
+            dealloc<void>(self.handle);
             self.handle = NULL;
         }
     }
@@ -253,7 +256,7 @@ struct SemData {
 impl Semaphore {
     @cfg(apple)
     fn new(value: int) -> Semaphore {
-        let data = (SemData*)malloc(sizeof(SemData));
+        let data = (SemData*)zalloc_bytes(sizeof(SemData));
         data.mutex = Mutex::new();
         data.cond = CondVar::new();
         data.count = value;
@@ -262,7 +265,7 @@ impl Semaphore {
 
     @cfg(not(apple))
     fn new(value: int) -> Semaphore {
-        let ptr = malloc(32);
+        let ptr = alloc_bytes(32);
         sem_init(ptr, 0, value);
         return Semaphore { handle: ptr };
     }
@@ -337,7 +340,7 @@ impl Semaphore {
             let data = (SemData*)self.handle;
             data.mutex.free();
             data.cond.free();
-            free(data);
+            dealloc<SemData>(data);
             self.handle = NULL;
         }
     }
@@ -346,7 +349,7 @@ impl Semaphore {
     fn free(self) {
         if (self.handle != NULL) {
             sem_destroy(self.handle);
-            free(self.handle);
+            dealloc<void>(self.handle);
             self.handle = NULL;
         }
     }

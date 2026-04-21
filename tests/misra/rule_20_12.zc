@@ -1,2 +1,7 @@
-include "rule_20_12.h"
-fn main() {}
+// MISRA Rule 20.11 Verification
+// EXPECT: MISRA Rule 20.12
+
+#define MACRO(x) #x + x // EXPECT: MISRA Rule 20.12
+
+fn main() {
+}

@@ -1,5 +1,7 @@
-include "rule_20_10.h"
+// MISRA Rule 20.10 Verification
+// EXPECT: MISRA Rule 20.10
+
+#define MACRO(x) #x // EXPECT: MISRA Rule 20.10
 
 fn main() {
-    let x = OK_MACRO;
 }

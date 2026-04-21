@@ -14,7 +14,7 @@ impl Stack<T> {
 
   fn free(self) {
     if (self.data) {
-      free(self.data);
+      dealloc<T>(self.data);
       self.data = NULL;
     }
     self.len = 0;
@@ -24,7 +24,7 @@ impl Stack<T> {
     let new_stack = Stack<T>::new();
     new_stack.len = self.len;
     new_stack.cap = self.cap;
-    new_stack.data = malloc(sizeof(T) * new_stack.cap);
+    new_stack.data = alloc_n<T>(new_stack.cap);
     memcpy(new_stack.data, self.data, sizeof(T) * new_stack.len);
     return new_stack;
   }
@@ -32,11 +32,12 @@ impl Stack<T> {
   fn push(self, value: T) {
     if (!self.data) {
       self.cap = 8;
-      self.data = malloc(sizeof(T) * self.cap);
+      self.data = alloc_n<T>(self.cap);
     }
     if (self.len == self.cap) {
+      let old_cap = self.cap;
       self.cap = self.cap * 2;
-      self.data = realloc(self.data, sizeof(T) * self.cap);
+      self.data = realloc_n<T>(self.data, old_cap, self.cap);
     }
     self.data[self.len] = value;
     self.len = self.len + 1;

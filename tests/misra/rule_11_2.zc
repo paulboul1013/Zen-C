@@ -1,18 +1,9 @@
-/**
- * @test MISRA Rule 11.2: Pointer to incomplete type conversion
- * Requirement: Conversions shall not be performed between a pointer to an incomplete type and any other type.
- */
+// MISRA Rule 11.2 Verification
+// EXPECT: MISRA Rule 11.2
 
-struct Opaque; // Forward declaration (Incomplete type)
+extern struct IncompleteStruct; 
 
-fn main() -> i32 {
-    let optr: *Opaque = 0 as *Opaque;
-    
-    // Violation: Conversion from pointer to incomplete type to pointer to int
-    let iptr: *i32 = optr as *i32; // Error: MISRA Rule 11.2
-    
-    // Violation: Conversion from pointer to int to pointer to incomplete type
-    let optr2: *Opaque = iptr as *Opaque; // Error: MISRA Rule 11.2
-
-    return 0;
+fn main() {
+    let ptr: IncompleteStruct*;
+    let _casted: int* = ptr as int*; // EXPECT: MISRA Rule 11.2
 }

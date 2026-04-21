@@ -1,5 +1,6 @@
 
 import "./core.zc"
+import "./mem.zc"
 import "./iter.zc"
 import "./sort.zc"
 
@@ -79,16 +80,17 @@ impl Vec<T> {
             return Vec<T> { data: NULL, len: 0, cap: 0 };
         }
         return Vec<T> {
-            data: (T*)malloc(cap * sizeof(T)),
+            data: alloc_n<T>(cap),
             len: 0,
             cap: cap
         };
     }
 
     fn grow(self) {
+        let old_cap = self.cap;
         if (self.cap == 0) { self.cap = 8; }
         else { self.cap = self.cap * 2; }
-        self.data = (T*)realloc(self.data, self.cap * sizeof(T));
+        self.data = realloc_n<T>(self.data, old_cap, self.cap);
     }
 
     fn grow_to_fit(self, new_len: usize) {
@@ -96,12 +98,13 @@ impl Vec<T> {
             return;
         }
 
+        let old_cap = self.cap;
         if (self.cap == 0) { self.cap = 8; }
         while self.cap < new_len {
             self.cap = self.cap * 2;
         }
 
-        self.data = (T*)realloc(self.data, self.cap * sizeof(T));
+        self.data = realloc_n<T>(self.data, old_cap, self.cap);
     }
 
     fn iterator(self) -> VecIter<T> {
@@ -236,7 +239,9 @@ impl Vec<T> {
     }
     
     fn free(self) {
-        if (self.data) free(self.data);
+        if (self.data != NULL) {
+            dealloc<T>(self.data);
+        }
         self.data = NULL;
         self.len = 0;
         self.cap = 0;
@@ -360,7 +365,7 @@ impl Vec<T> {
         if (self.len == 0) {
             return Vec<T> { data: NULL, len: 0, cap: 0 };
         }
-        let new_data = (T*)malloc(self.len * sizeof(T));
+        let new_data = alloc_n<T>(self.len);
         let i: usize = 0;
         while i < self.len {
             new_data[i] = self.data[i];

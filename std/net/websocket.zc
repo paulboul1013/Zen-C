@@ -3,6 +3,7 @@ import "./tcp.zc"
 import "./http.zc"
 import "../crypto/sha1.zc"
 import "../encoding/base64.zc"
+import "../mem.zc"
 
 struct WebSocket {
     stream: TcpStream;
@@ -131,10 +132,10 @@ impl WebSocket {
         }
         
         // Proper way:
-        let buf = (u8*)malloc(len + 1);
+        let buf = alloc_n<u8>(len + 1);
         let read_res = self.stream.read_exact((char*)buf, len);
         if (read_res.is_err()) {
-            free(buf);
+            dealloc<u8>(buf);
             return Result<String>::Err("Read failed");
         }
         
@@ -150,7 +151,7 @@ impl WebSocket {
 
         
         let s = String::new((char*)buf);
-        free(buf);
+        dealloc<u8>(buf);
         return Result<String>::Ok(s);
     }
 }

@@ -2,6 +2,8 @@
 import "./option.zc"
 import "./hash.zc"
 
+import "./mem.zc"
+
 struct Set<T> {
     data: T*;
     occupied: bool*;
@@ -22,9 +24,12 @@ impl Set<T> {
         let old_cap = self.cap;
 
         self.cap = new_cap;
-        self.data = calloc(new_cap, sizeof(T));
-        self.occupied = calloc(new_cap, sizeof(bool));
-        self.deleted = calloc(new_cap, sizeof(bool));
+        self.data = alloc_n<T>(new_cap);
+        self.occupied = alloc_n<bool>(new_cap);
+        self.deleted = alloc_n<bool>(new_cap);
+        memset(self.data, 0, new_cap * sizeof(T));
+        memset(self.occupied, 0, new_cap * sizeof(bool));
+        memset(self.deleted, 0, new_cap * sizeof(bool));
         self.len = 0;
 
         for (let i: usize = 0; i < old_cap; i = i + 1) {
@@ -33,9 +38,9 @@ impl Set<T> {
             }
         }
 
-        if (old_data != NULL) { free(old_data); }
-        if (old_occupied != NULL) { free(old_occupied); }
-        if (old_deleted != NULL) { free(old_deleted); }
+        if (old_data != NULL) { dealloc<T>(old_data); }
+        if (old_occupied != NULL) { dealloc<bool>(old_occupied); }
+        if (old_deleted != NULL) { dealloc<bool>(old_deleted); }
     }
 
     fn add(self, val: T) -> bool {
@@ -115,9 +120,9 @@ impl Set<T> {
 
     fn free(self) {
         if (self.data) {
-            free(self.data);
-            free(self.occupied);
-            free(self.deleted);
+            dealloc<T>(self.data);
+            dealloc<bool>(self.occupied);
+            dealloc<bool>(self.deleted);
         }
         self.data = 0;
         self.occupied = 0;
